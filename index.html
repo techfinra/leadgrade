@@ -1455,6 +1455,35 @@ function scoreItem(item, src) {
   };
 }
 
+// ═══ 렌더링 헬퍼 함수 ═══
+function gradeCol(g,s){
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'+gb(g)+'<span style="font-size:9px;font-weight:800;color:var(--text3)">'+s+'점</span></div>';
+}
+function gb(g){return '<span class="grade g'+g+'">'+g+'</span>';}
+function tb(t){
+  var m={신규발굴형:'신규',전환형:'전환',갱신형:'갱신',재활성화형:'재활성',집중관리형:'집중'};
+  return '<span class="tbadge t'+(m[t]||'신규')+'">'+t+'</span>';
+}
+function sb(s){return '<div class="sbar"><span class="snum">'+s+'</span><div class="track"><div class="fill" style="width:'+s+'%"></div></div></div>';}
+function tc(t){
+  var m={'timing-urgent':'🔴 즉시','timing-soon':'🟡 이번주','timing-normal':'🟢 2주내'};
+  return '<span class="timing-badge '+(t||'')+'">'+( m[t]||'—')+'</span>';
+}
+function fa(v){
+  if(!v)return '—';
+  if(v>=1e8)return(v/1e8).toFixed(1)+'억';
+  if(v>=1e4)return Math.round(v/1e4)+'만';
+  return v.toLocaleString()+'원';
+}
+function fdt(s){
+  if(!s)return '—';
+  if(s.indexOf('-')>=0)return s.slice(0,10).replace(/-/g,'.')+(s.length>10?' '+s.slice(11,16):'');
+  if(s.length>=8)return s.slice(0,4)+'.'+s.slice(4,6)+'.'+s.slice(6,8);
+  return '—';
+}
+function escH(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function stBadge(s){return '<span class="sbadge s'+s+'">'+s+'</span>';}
+
 // ═══ 가상 스크롤 렌더링 ═══
 var RENDER_BATCH = 100, _renderIdx = 0, _renderList = [];
 
