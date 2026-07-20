@@ -831,6 +831,9 @@ function countFu(all){return all.filter(isFollowup).length;}
 
 // ═══ 대시보드 ═══
 async function loadDashboard(){
+  // 즉시 로딩 상태 표시
+  var hdTxt=document.getElementById('hd-status-text');
+  if(hdTxt) hdTxt.textContent='로딩 중...';
   var tbody=document.getElementById('dash-tbody');
   try{
     var all=await fbGet(); savedLeads=all; _allLeads=all;
@@ -857,7 +860,7 @@ async function loadDashboard(){
     });
     tbody.innerHTML=rows;
   } catch(e){
-    console.error('[Firebase] loadDashboard 오류:', e.code, e.message);
+    console.error('[LeadGrade] loadDashboard 오류:', e.code, e.message, e.stack);
     setFbErr(e.code||'error', e.message||String(e));
     tbody.innerHTML='<tr><td colspan="8">'+errHtml(e)+'</td></tr>';
   }
