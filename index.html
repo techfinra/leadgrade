@@ -286,7 +286,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 <body>
 <canvas id="particles"></canvas>
 <header>
-  <div class="logo" onclick="showPage('dashboard',null)">
+  <div class="logo" onclick="showPage(&apos;dashboard&apos;,null)">
     <div class="logo-mark">⚡</div>
     <div class="logo-text">LeadGrade AI</div>
     <span class="logo-sub">오늘 누구에게, 무엇을, 어떻게</span>
@@ -303,14 +303,14 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 <div class="app">
 <aside>
   <div class="sb-label">Intelligence</div>
-  <button class="nav active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span>대시보드</button>
-  <button class="nav" onclick="showPage('today',this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
-  <button class="nav" onclick="showPage('search',this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
-  <button class="nav" onclick="showPage('pipeline',this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
-  <button class="nav" onclick="showPage('leads',this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
+  <button class="nav active" onclick="showPage(&apos;dashboard&apos;,this)"><span class="nav-icon">📊</span>대시보드</button>
+  <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
+  <button class="nav" onclick="showPage(&apos;search&apos;,this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
+  <button class="nav" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
+  <button class="nav" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
   <div class="sb-label">System</div>
-  <button class="nav" onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span>설정</button>
-  <button class="nav" onclick="showPage('guide',this)"><span class="nav-icon">📖</span>가이드</button>
+  <button class="nav" onclick="showPage(&apos;settings&apos;,this)"><span class="nav-icon">⚙️</span>설정</button>
+  <button class="nav" onclick="showPage(&apos;guide&apos;,this)"><span class="nav-icon">📖</span>가이드</button>
   <div class="sb-foot">
     <div id="sb-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--blue);animation:blink 2s infinite"></div><span style="font-size:11px;color:var(--text3);margin-left:7px">연결 확인 중...</span></div>
     <div id="sb-detail" style="font-size:10px;color:var(--text3);line-height:1.9;margin-top:4px"></div>
@@ -331,7 +331,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
     <div class="chart-card"><div class="chart-title">등급별 분포</div><div id="grade-chart"></div></div>
     <div class="chart-card"><div class="chart-title">파이프라인 현황</div><div id="pipeline-chart"></div></div>
   </div>
-  <div class="sec">최근 저장 기업 <span class="sec-action" onclick="showPage('leads',document.querySelectorAll('.nav')[4])">전체 보기 →</span></div>
+  <div class="sec">최근 저장 기업 <span class="sec-action" onclick="showPage(&apos;leads&apos;,document.querySelectorAll(&apos;.nav&apos;)[4])">전체 보기 →</span></div>
   <div class="tbl-wrap"><table>
     <thead><tr><th>등급</th><th>공고명</th><th>유형</th><th>상태</th><th>점수</th><th>금액</th><th>저장일</th><th>삭제</th></tr></thead>
     <tbody id="dash-tbody"><tr><td colspan="8"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
@@ -356,8 +356,8 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 
   <!-- 데이터소스 탭 -->
   <div style="display:flex;gap:8px;margin-bottom:14px">
-    <button class="btn btn-primary" id="src-scsbid-btn" onclick="setSrc('scsbid',this)" style="flex:1">🏆 낙찰정보 (개찰 완료 업체)</button>
-    <button class="btn btn-sec" id="src-cntrct-btn" onclick="setSrc('cntrct',this)" style="flex:1">📝 계약정보 (계약 체결 업체)</button>
+    <button class="btn btn-primary" id="src-scsbid-btn" onclick="setSrc(&apos;scsbid&apos;,this)" style="flex:1">🏆 낙찰정보 (개찰 완료 업체)</button>
+    <button class="btn btn-sec" id="src-cntrct-btn" onclick="setSrc(&apos;cntrct&apos;,this)" style="flex:1">📝 계약정보 (계약 체결 업체)</button>
   </div>
   <div style="background:rgba(26,111,232,.06);border:1.5px solid rgba(26,111,232,.15);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.7">
     <b id="src-desc">🏆 낙찰정보:</b> <span id="src-desc-detail">낙찰 확정된 업체 리스트. 이 업체들이 계약 이행을 위해 기업신용평가서가 곧 필요합니다.</span>
@@ -413,7 +413,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
     <button class="btn btn-gold btn-sm" onclick="exportCSV()">📥 CSV</button>
   </div>
   <div class="tbl-wrap"><table>
-    <thead><tr><th>등급</th><th class="sortable" onclick="sortLeads('name')">공고명 ⇅</th><th>유형</th><th>상태</th><th class="sortable" onclick="sortLeads('score')">점수 ⇅</th><th>연락시점</th><th>분야</th><th class="sortable" onclick="sortLeads('amount')">금액 ⇅</th><th>저장일</th><th>삭제</th></tr></thead>
+    <thead><tr><th>등급</th><th class="sortable" onclick="sortLeads(&apos;name&apos;)">공고명 ⇅</th><th>유형</th><th>상태</th><th class="sortable" onclick="sortLeads(&apos;score&apos;)">점수 ⇅</th><th>연락시점</th><th>분야</th><th class="sortable" onclick="sortLeads(&apos;amount&apos;)">금액 ⇅</th><th>저장일</th><th>삭제</th></tr></thead>
     <tbody id="leads-tbody"><tr><td colspan="10"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
   </table></div>
 </div>
@@ -849,14 +849,14 @@ async function loadDashboard(){
     var rows='';
     all.slice(0,8).forEach(function(l,i){
       var fu2=isFollowup(l)?'class="followup-alert"':'';
-      rows+='<tr '+fu2+' onclick="openPanelSaved('+i+')">';
+      rows+='<tr '+fu2+' onclick="openPanelSaved(&apos;+i+&apos;)">';
       rows+='<td>'+gradeCol(l.grade,l.score)+'</td>';
       rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:2px">'+(l.name||'').slice(0,28)+'</div><div style="font-size:11px;color:var(--text3)">🏢 '+(l.org||'—')+'</div></td>';
       rows+='<td>'+tb(l.type)+'</td><td>'+stBadge(l.status||'연락전')+'</td>';
       rows+='<td>'+sb(l.score)+'</td>';
       rows+='<td style="font-weight:700;color:var(--text)">'+fa(l.amount)+'</td>';
       rows+='<td style="font-size:11px;color:var(--text3)">'+(l.savedAt&&l.savedAt.toDate?l.savedAt.toDate().toLocaleDateString('ko-KR'):'—')+'</td>';
-      rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt('+i+')">🗑️</span></td></tr>';
+      rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt(&apos;+i+&apos;)">🗑️</span></td></tr>';
     });
     tbody.innerHTML=rows;
   } catch(e){
@@ -902,7 +902,7 @@ async function loadToday(){
       var cards='';
       top.forEach(function(l,i){
         var idx=all.findIndex(function(x){return x._id===l._id;});
-        cards+='<div class="top3-card" onclick="openPanelSaved('+idx+')">';
+        cards+='<div class="top3-card" onclick="openPanelSaved(&apos;+idx+&apos;)">';
         cards+='<div class="top3-rank">'+(i+1)+'</div>';
         cards+='<div class="top3-medal '+medals[i]+'">'+['🥇','🥈','🥉'][i]+'</div>';
         cards+='<div class="top3-name">'+escH(l.name||'')+'</div>';
@@ -910,7 +910,7 @@ async function loadToday(){
         cards+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="top3-score">'+l.score+'</div>'+gb(l.grade)+' '+tb(l.type)+'</div>';
         cards+=stBadge(l.status||'연락전');
         cards+='<div style="display:flex;gap:6px;margin-top:12px">';
-        cards+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openPanelSaved('+idx+')">상세</button>';
+        cards+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openPanelSaved(&apos;+idx+&apos;)">상세</button>';
         cards+='<button class="btn btn-success btn-sm" data-id="'+l._id+'" onclick="event.stopPropagation();qsReach(this)">📞 연락</button>';
         cards+='</div></div>';
       });
@@ -921,7 +921,7 @@ async function loadToday(){
     var frows='';
     fu.forEach(function(l){
       var idx=all.findIndex(function(x){return x._id===l._id;});
-      frows+='<tr onclick="openPanelSaved('+idx+')">';
+      frows+='<tr onclick="openPanelSaved(&apos;+idx+&apos;)">';
       frows+='<td>'+gb(l.grade)+'</td>';
       frows+='<td><div style="font-weight:700;font-size:12px;color:var(--text)">'+(l.name||'').slice(0,26)+'</div></td>';
       frows+='<td>'+stBadge(l.status||'연락전')+'</td>';
@@ -965,7 +965,7 @@ async function loadPipeline(){
       items.forEach(function(l){
         var idx=all.findIndex(function(x){return x._id===l._id;});
         var curIdx=STATUSES.indexOf(s);
-        colsHtml+='<div class="kcard" onclick="openPanelSaved('+idx+')">';
+        colsHtml+='<div class="kcard" onclick="openPanelSaved(&apos;+idx+&apos;)">';
         colsHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+gb(l.grade)+'<span style="font-size:9px;font-weight:800;color:var(--text3)">'+l.score+'점</span></div>';
         colsHtml+='<div class="kcard-name">'+escH((l.name||'').slice(0,40))+'</div>';
         colsHtml+='<div class="kcard-org">🏢 '+(l.org||'—').slice(0,20)+'</div>';
@@ -1013,7 +1013,7 @@ function filterLeads(){
   list.forEach(function(l){
     var idx=savedLeads.findIndex(function(x){return x._id===l._id;});
     var fu2=isFollowup(l)?'class="followup-alert"':'';
-    rows+='<tr '+fu2+' onclick="openPanelSaved('+idx+')">';
+    rows+='<tr '+fu2+' onclick="openPanelSaved(&apos;+idx+&apos;)">';
     rows+='<td>'+gradeCol(l.grade,l.score)+'</td>';
     rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:1px">'+(l.name||'').slice(0,28)+(isFollowup(l)?'<span style="font-size:10px;color:var(--danger);margin-left:5px">⚠️</span>':'')+'</div><div style="font-size:11px;color:var(--text3)">🏢 '+(l.org||'—')+'</div></td>';
     rows+='<td>'+tb(l.type)+'</td><td>'+stBadge(l.status||'연락전')+'</td>';
@@ -1021,7 +1021,7 @@ function filterLeads(){
     rows+='<td style="font-size:11px;color:var(--text3)">'+(l.field||'—')+'</td>';
     rows+='<td style="font-weight:700;color:var(--text)">'+fa(l.amount)+'</td>';
     rows+='<td style="font-size:11px;color:var(--text3)">'+(l.savedAt&&l.savedAt.toDate?l.savedAt.toDate().toLocaleDateString('ko-KR'):'—')+'</td>';
-    rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt('+idx+')">🗑️</span></td></tr>';
+    rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt(&apos;+idx+&apos;)">🗑️</span></td></tr>';
   });
   // DocumentFragment로 한번에 DOM 삽입
   var frag=document.createDocumentFragment();
@@ -1339,7 +1339,7 @@ function updateDashBanner(leads) {
   d.innerHTML = '<span style="font-size:13px;font-weight:800;color:var(--blue)">🏆 최근 수집</span>' +
     '<span style="font-size:13px;color:var(--text2)">총 <b style="color:var(--text)">' + leads.length + '</b>개사</span>' +
     '<span class="grade gA">A</span><b style="color:var(--text)">' + aLen + '개사</b>' +
-    '<button class="btn btn-primary btn-sm" onclick="showPage('search',document.querySelectorAll('.nav')[2])">결과 보기 →</button>' +
+    '<button class="btn btn-primary btn-sm" onclick="showPage(&apos;search&apos;,document.querySelectorAll(&apos;.nav&apos;)[2])">결과 보기 →</button>' +
     '<button onclick="clearSearchBanner()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;margin-left:auto">✕</button>';
   b.appendChild(d);
 }
@@ -1573,7 +1573,7 @@ function openPanel(l,src,i){
   html+='<div class="sec-h">선정 근거</div>';
   if(l.reasons&&l.reasons.length){l.reasons.forEach(function(r){html+='<div class="pt"><div class="pd"></div><span>'+r+'</span></div>';});}
   else html+='<div style="font-size:12px;color:var(--text3)">기본 조달 활동 확인</div>';
-  html+='<div class="sec-h">점수 상세 <span style="font-size:9px;color:var(--blue);cursor:pointer" onclick="openScoreModal('+i+','+(src==='search'?0:1)+')">→ 상세</span></div>';
+  html+='<div class="sec-h">점수 상세 <span style="font-size:9px;color:var(--blue);cursor:pointer" onclick="openScoreModal(&apos;+i+&apos;,&apos;+(src===&apos;search&apos;?0:1)+&apos;)">→ 상세</span></div>';
   html+=buildSBD(l);
   html+='<div class="sec-h">핵심 영업 포인트</div>';
   var pts=['조달청·나라장터 즉시 제출 가능','기업 규모 무관 단일 수수료','신청 당일 신속 발급'];
@@ -1586,8 +1586,8 @@ function openPanel(l,src,i){
   html+='<div id="ts" style="display:none"><div class="msg-box" id="sc-ts"><button class="copy-btn" onclick="copyMsg(\"sc-ts\")">복사</button>'+bSMS(l)+'</div></div>';
   html+='<div id="te" style="display:none"><div class="msg-box" id="sc-te"><button class="copy-btn" onclick="copyMsg(\"sc-te\")">복사</button>'+bEmail(l)+'</div></div>';
   html+='<div style="display:flex;gap:8px;margin-top:16px">';
-  if(src==='search'&&!l.isDup) html+='<button class="btn btn-primary" style="flex:1" onclick="saveLead('+i+')">💾 저장</button>';
-  if(src==='saved') html+='<button class="btn btn-danger" onclick="delPromptIdx('+i+')">🗑️ 삭제</button>';
+  if(src==='search'&&!l.isDup) html+='<button class="btn btn-primary" style="flex:1" onclick="saveLead(&apos;+i+&apos;)">💾 저장</button>';
+  if(src==='saved') html+='<button class="btn btn-danger" onclick="delPromptIdx(&apos;+i+&apos;)">🗑️ 삭제</button>';
   html+='<button class="btn btn-sec" onclick="closePanel()">닫기</button></div>';
   document.getElementById('panel-body').innerHTML=html;
   document.getElementById('panel').classList.add('open');
