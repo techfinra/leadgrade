@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>API 테스트</title></head>
+<body style="font-family:monospace;padding:20px;background:#111;color:#0f0;font-size:13px">
+<h2 style="color:#fff">나라장터 낙찰 API 테스트</h2>
+<div id="log"></div>
+<script>
+var KEY = '5e28545eb4cc2148cc0a3dc9eb8d273018db18537aa28ed21e7983ed66363aef';
+var now = new Date();
+var end = now.toISOString().slice(0,10).replace(/-/g,'') + '2359';
+var s = new Date(now - 30*86400000);
+var start = s.toISOString().slice(0,10).replace(/-/g,'') + '0000';
+
+function log(msg, color) {
+  var d = document.createElement('div');
+  d.style.color = color || '#0f0';
+  d.style.marginBottom = '4px';
+  d.textContent = msg;
+  document.getElementById('log').appendChild(d);
+}
+
+var DIRECT = 'https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListInfoCnstwk'
+  + '?ServiceKey=' + KEY + '&pageNo=1&numOfRows=3&type=json&inqryDiv=1'
+  + '&inqryBgnDt=' + start + '&inqryEndDt=' + end;
+
+var proxies = [
+  { name: '직접호출', url: DIRECT },
+  { name: 'allorigins/raw', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(DIRECT) },
+  { name: 'allorigins/get', url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(DIRECT) },
+  { name: 'corsproxy.io', url: 'https://corsproxy.io/?' + encodeURIComponent(DIRECT) },
+  { name: 'cors.bridged.cc', url: 'https://cors.bridged.cc/' + DIRECT },
+];
+
+async function test() {
+  log('테스트 시작: ' + new Date().toLocaleTimeString());
+  log('기간: ' + start + ' ~ ' + end);
+  log('');
+  for (var p of proxies) {
+    var name = p.name;
+    try {
+      log('[' + name + '] 시도 중...');
+      var res = await fetch(p.url, { signal: AbortSignal.timeout(12000) });
+      var txt = await res.text();
+      if (txt && txt.length > 50) {
+        // allorigins/get 는 JSON wrapper
+        var raw = txt;
+        if (name === 'allorigins/get') {
+          try { raw = JSON.parse(txt).contents; } catch(e) {}
+        }
+        log('[' + name + '] ✅ ' + txt.length + 'bytes — ' + raw.slice(0,80), '#0f0');
+      } else {
+        log('[' + name + '] ⚠️ 빈 응답 (' + txt.length + 'bytes): ' + txt.slice(0,40), '#fa0');
+      }
+    } catch(e) {
+      log('[' + name + '] ❌ ' + e.message, '#f44');
+    }
+    log('');
+  }
+}
+test();
+</script>
+</body></html>
