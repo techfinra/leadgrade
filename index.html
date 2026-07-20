@@ -1158,8 +1158,8 @@ async function fetchLeads() {
   var epMap = src === 'scsbid' ? epMapScsbid : epMapCntrct;
   var eps = bidType ? [epMap[bidType]] :
     (src === 'scsbid'
-      ? ['getScsbidListInfoCnstwk','getScsbidListInfoServc','getScsbidListInfoThng']
-      : ['getCntrctInfoListCnstwk','getCntrctInfoListServc','getCntrctInfoListThng']);
+      ? ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng']
+      : ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng']);
 
   // ─ 공통 쿼리스트링
   function makeQs(pg, rows) {
@@ -1192,9 +1192,14 @@ async function fetchLeads() {
     var collected = [], epTotals = {};
     for (var ri = 0; ri < res.length; ri++) {
       if (res[ri].status !== 'fulfilled') { log('❌ ' + (res[ri].reason||{}).message); continue; }
-      var nm  = res[ri].value.ep.replace('getScsbidListInfo','').replace('getCntrctInfoList','');
+      var nm  = res[ri].value.ep.replace('getScsbidListSttus','').replace('getScsbidListInfo','').replace('getCntrctInfoList','');
       var txt = res[ri].value.txt;
-      if (!txt || txt.length < 50) { log('[' + nm + '] 빈 응답'); continue; }
+      if (!txt || txt.length < 50) { log('[' + nm + '] 빈 응답 ('+txt.length+'bytes)', '#fa0'); continue; }
+      // Vercel Function 디버그 응답 처리
+      if (txt.indexOf('"_debug"') >= 0) {
+        try { var dbg=JSON.parse(txt); log('['+nm+'] 서버 디버그: status='+dbg._status+' body='+dbg._body, '#fa0'); } catch(e){}
+        continue;
+      }
       if (txt.indexOf('SERVICE_KEY_IS_NOT_REGISTERED_ERROR') >= 0) { log('[' + nm + '] API키 오류'); continue; }
       if (txt.indexOf('INVALID_REQUEST_PARAMETER_ERROR') >= 0)     { log('[' + nm + '] 파라미터 오류: ' + txt.slice(0,120)); continue; }
       if (txt.indexOf('ResponseError') >= 0 || txt.indexOf('"resultCode":"08"') >= 0) { log('[' + nm + '] API 에러: ' + txt.slice(0,120)); continue; }
@@ -1367,15 +1372,15 @@ function scoreItem(item, src) {
   var bd = {활동성:0, 시급성:0, 매출가능성:0, 이용여부:0, 평가필요:0, 반응도:0};
   var reasons = [];
 
-  // ─ 낙찰정보 필드
-  var compNm   = item.sucsfbidCorpNm || item.cntrctCorpNm || item.bizNm || item.ntceInsttNm || '—';
-  var bizno    = item.sucsfbidCorpBizno || item.cntrctCorpBizno || item.bizno || '';
+  // ─ 낙찰정보 필드 (API 실제 응답 기준: bidwinnrNm, bidwinnrBizno 등)
+  var compNm   = item.bidwinnrNm || item.sucsfbidCorpNm || item.cntrctCorpNm || '—';
+  var bizno    = item.bidwinnrBizno || item.sucsfbidCorpBizno || item.cntrctCorpBizno || '';
   var bidNm    = item.bidNtceNm || item.cntrctNm || '(공고명없음)';
-  var orgNm    = item.ntceInsttNm || item.dminsttNm || '—';
+  var orgNm    = item.dminsttNm || item.ntceInsttNm || '—';
   var clsfc    = item.bidClsfcNo || '';
-  var method   = item.sucsfbidMthdNm || item.cntrctMthdNm || '';
-  var amt      = parseFloat(item.sucsfbidAmt || item.cntrctAmt || item.asignBdgtAmt || 0);
-  var scsbidDt = item.opengDt || item.cntrctDt || item.bidNtceDt || '';
+  var method   = item.sucsfbidMthdNm || item.ntceDivCd || '';
+  var amt      = parseFloat(item.sucsfbidAmt || item.cntrctAmt || 0);
+  var scsbidDt = item.fnlSucsfDate || item.rlOpengDt || item.rgstDt || '';
   var id       = (bizno || compNm) + '_' + (item.bidNtceNo || item.cntrctNo || Math.random().toString(36).slice(2,7));
   var field    = {1:'공사',2:'용역',3:'물품'}[clsfc] || item.srvceDivNm || '기타';
   var durl     = item.bidNtceDtlUrl || item.bidNtceUrl || '';
