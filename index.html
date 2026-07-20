@@ -1178,10 +1178,13 @@ async function fetchLeads() {
     var curUrls = eps.map(function(ep){ return { ep:ep, url: BASE + ep + '?' + makeQs(pg, API_MAX) }; });
     var res = await Promise.allSettled(curUrls.map(function(o){
       // 나라장터 API CORS 우회: allorigins 프록시 경유
-      // 직접호출 1순위 (입찰공고 API는 CORS 허용), fallback: allorigins
-      return fetch(o.url, {signal: AbortSignal.timeout(12000)})
+      // Vercel 프록시 1순위 (서버사이드 → CORS 없음)
+      // URL에서 파라미터 추출해 /api/nara 로 전달
+      var proxyUrl = '/api/nara?' + o.url.split('?')[1] + '&_ep=' + o.ep + '&_svc=ScsbidInfoService';
+      return fetch(proxyUrl, {signal: AbortSignal.timeout(15000)})
         .catch(function() {
-          return fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(o.url), {signal: AbortSignal.timeout(15000)});
+          // fallback: 직접호출
+          return fetch(o.url, {signal: AbortSignal.timeout(12000)});
         })
         .then(function(r){ return r.text(); })
         .then(function(t){ return {ep:o.ep, txt:t}; });
