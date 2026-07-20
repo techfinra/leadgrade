@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Firebase 진단</title></head>
+<body style="font-family:monospace;padding:20px;background:#111;color:#0f0;font-size:14px">
+<h2 style="color:#fff">Firebase 연결 진단</h2>
+<div id="log"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+function log(msg, color) {
+  var d = document.createElement('div');
+  d.style.color = color || '#0f0';
+  d.style.marginBottom = '6px';
+  d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  document.getElementById('log').appendChild(d);
+  console.log(msg);
+}
+
+log('1. Firebase SDK 로드 완료');
+log('2. 환경: ' + location.protocol + '//' + location.host);
+
+try {
+  firebase.initializeApp({
+    apiKey:           "AIzaSyBcpPb1REiD0OPzEbJZDdrZNx4rfLHk84A",
+    authDomain:       "powerfull-fe4c1.firebaseapp.com",
+    projectId:        "powerfull-fe4c1",
+    storageBucket:    "powerfull-fe4c1.firebasestorage.app",
+    messagingSenderId:"88203935558",
+    appId:            "1:88203935558:web:5dbdff7920488f23e7af47"
+  });
+  log('3. initializeApp 성공');
+  
+  var db = firebase.firestore();
+  log('4. firestore() 인스턴스 생성 성공');
+  
+  log('5. Firestore 읽기 테스트 시작...');
+  db.collection('leads').limit(1).get()
+    .then(function(snap) {
+      log('6. ✅ 연결 성공! 문서 수: ' + snap.size, '#0f0');
+    })
+    .catch(function(e) {
+      log('6. ❌ 읽기 실패 — code: ' + e.code, '#f44');
+      log('   message: ' + e.message, '#f88');
+    });
+} catch(e) {
+  log('❌ 초기화 오류: ' + e.message, '#f44');
+}
+</script>
+</body>
+</html>
