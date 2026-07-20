@@ -1126,7 +1126,7 @@ async function fetchLeads() {
   document.getElementById('save-all-btn').style.display = 'none';
 
   var src = _currentSrc;
-  var srcName = src === 'scsbid' ? '낙찰정보' : '계약정보';
+  var srcName = '입찰공고';
   var end = dateStr(0), start = dateStr(-parseInt(dayRange));
 
   log(srcName + ' 수집 시작');
@@ -1140,16 +1140,18 @@ async function fetchLeads() {
   var BASE_CNTRCT  = 'https://apis.data.go.kr/1230000/ao/CntrctInfoService/';
 
   // 낙찰정보 엔드포인트
+  // 입찰공고 API 엔드포인트 (낙찰/계약 API는 CORS 차단됨 → 입찰공고로 대체)
   var epMapScsbid = {
-    '1': 'getScsbidListInfoCnstwk',   // 공사
-    '2': 'getScsbidListInfoServc',    // 용역
-    '3': 'getScsbidListInfoThng',     // 물품
+    '1': 'getBidPblancListInfoCnstwk',  // 공사 입찰공고
+    '2': 'getBidPblancListInfoServc',   // 용역 입찰공고
+    '3': 'getBidPblancListInfoThng',    // 물품 입찰공고
+    '': 'getBidPblancListInfoServc',    // 기본값
   };
-  // 계약정보 엔드포인트
   var epMapCntrct = {
-    '1': 'getCntrctInfoListCnstwk',
-    '2': 'getCntrctInfoListServc',
-    '3': 'getCntrctInfoListThng',
+    '1': 'getBidPblancListInfoCnstwk',
+    '2': 'getBidPblancListInfoServc',
+    '3': 'getBidPblancListInfoThng',
+    '': 'getBidPblancListInfoServc',
   };
 
   var BASE = src === 'scsbid' ? BASE_SCSBID : BASE_CNTRCT;
@@ -1161,15 +1163,13 @@ async function fetchLeads() {
 
   // ─ 공통 쿼리스트링
   function makeQs(pg, rows) {
-    var qs = 'ServiceKey=' + API_KEY +
+    var qs = 'serviceKey=' + API_KEY +
       '&pageNo=' + pg + '&numOfRows=' + rows + '&type=json' +
       '&inqryDiv=1' +
       '&inqryBgnDt=' + start + '0000' +
-      '&inqryEndDt='   + end   + '2359';
-    if (keyword) {
-      // 낙찰: bidNtceNm (공고명), cntrct: cntrctNm 또는 bidNtceNm
-      qs += '&bidNtceNm=' + encodeURIComponent(keyword);
-    }
+      '&inqryEndDt=' + end + '2359';
+    if (bidType) qs += '&bidClsfcNo=' + bidType;
+    if (keyword)  qs += '&bidNtceNm=' + encodeURIComponent(keyword);
     return qs;
   }
 
@@ -1178,8 +1178,11 @@ async function fetchLeads() {
     var curUrls = eps.map(function(ep){ return { ep:ep, url: BASE + ep + '?' + makeQs(pg, API_MAX) }; });
     var res = await Promise.allSettled(curUrls.map(function(o){
       // 나라장터 API CORS 우회: allorigins 프록시 경유
-      var proxied = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(o.url);
-      return fetch(proxied, {signal: AbortSignal.timeout(20000)})
+      // 직접호출 1순위 (입찰공고 API는 CORS 허용), fallback: allorigins
+      return fetch(o.url, {signal: AbortSignal.timeout(12000)})
+        .catch(function() {
+          return fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(o.url), {signal: AbortSignal.timeout(15000)});
+        })
         .then(function(r){ return r.text(); })
         .then(function(t){ return {ep:o.ep, txt:t}; });
     }));
