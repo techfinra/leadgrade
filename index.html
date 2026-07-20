@@ -7,22 +7,16 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-// ── Firebase 초기화 (file:// 환경 최적화)
+// ── Firebase 초기화
 firebase.initializeApp({
-  apiKey:            "AIzaSyBcpPb1REiD0OPzEbJZDdrZNx4rfLHk84A",
-  authDomain:        "powerfull-fe4c1.firebaseapp.com",
-  projectId:         "powerfull-fe4c1",
-  storageBucket:     "powerfull-fe4c1.firebasestorage.app",
-  messagingSenderId: "88203935558",
-  appId:             "1:88203935558:web:5dbdff7920488f23e7af47"
+  apiKey:           "AIzaSyBcpPb1REiD0OPzEbJZDdrZNx4rfLHk84A",
+  authDomain:       "powerfull-fe4c1.firebaseapp.com",
+  projectId:        "powerfull-fe4c1",
+  storageBucket:    "powerfull-fe4c1.firebasestorage.app",
+  messagingSenderId:"88203935558",
+  appId:            "1:88203935558:web:5dbdff7920488f23e7af47"
 });
 var db = firebase.firestore();
-
-// file:// 환경에서 long-polling으로 강제 전환 (WebChannel CORS 우회)
-db.settings({
-  experimentalForceLongPolling: true,
-  merge: true
-});
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
@@ -1672,7 +1666,7 @@ function clearPipelineHint(){document.getElementById('pipeline-hint-wrap').inner
 function delPromptIdx(i){_delIdx=i;var l=savedLeads[i];if(!l)return;document.getElementById('confirm-name').textContent='"'+(l.name||'').slice(0,30)+'" 를 영구 삭제합니다.';document.getElementById('confirm-ok-btn').onclick=doDelete;document.getElementById('confirm-bg').classList.add('open');}
 
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2800);}
-window.addEventListener('load',function(){setTimeout(loadDashboard,500);});
+window.addEventListener('load',function(){setTimeout(loadDashboard,1000);});
 </script>
 </body>
 </html>
