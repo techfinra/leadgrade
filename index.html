@@ -849,14 +849,14 @@ async function loadDashboard(){
     var rows='';
     all.slice(0,8).forEach(function(l,i){
       var fu2=isFollowup(l)?'class="followup-alert"':'';
-      rows+='<tr '+fu2+' onclick="openPanelSaved(&apos;+i+&apos;)">';
+      rows+='<tr '+fu2+' onclick="openPanelSaved('+i+')">';
       rows+='<td>'+gradeCol(l.grade,l.score)+'</td>';
       rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:2px">'+(l.name||'').slice(0,28)+'</div><div style="font-size:11px;color:var(--text3)">🏢 '+(l.org||'—')+'</div></td>';
       rows+='<td>'+tb(l.type)+'</td><td>'+stBadge(l.status||'연락전')+'</td>';
       rows+='<td>'+sb(l.score)+'</td>';
       rows+='<td style="font-weight:700;color:var(--text)">'+fa(l.amount)+'</td>';
       rows+='<td style="font-size:11px;color:var(--text3)">'+(l.savedAt&&l.savedAt.toDate?l.savedAt.toDate().toLocaleDateString('ko-KR'):'—')+'</td>';
-      rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt(&apos;+i+&apos;)">🗑️</span></td></tr>';
+      rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt('+i+')">🗑️</span></td></tr>';
     });
     tbody.innerHTML=rows;
   } catch(e){
@@ -902,7 +902,7 @@ async function loadToday(){
       var cards='';
       top.forEach(function(l,i){
         var idx=all.findIndex(function(x){return x._id===l._id;});
-        cards+='<div class="top3-card" onclick="openPanelSaved(&apos;+idx+&apos;)">';
+        cards+='<div class="top3-card" onclick="openPanelSaved('+idx+')">';
         cards+='<div class="top3-rank">'+(i+1)+'</div>';
         cards+='<div class="top3-medal '+medals[i]+'">'+['🥇','🥈','🥉'][i]+'</div>';
         cards+='<div class="top3-name">'+escH(l.name||'')+'</div>';
@@ -910,7 +910,7 @@ async function loadToday(){
         cards+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="top3-score">'+l.score+'</div>'+gb(l.grade)+' '+tb(l.type)+'</div>';
         cards+=stBadge(l.status||'연락전');
         cards+='<div style="display:flex;gap:6px;margin-top:12px">';
-        cards+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openPanelSaved(&apos;+idx+&apos;)">상세</button>';
+        cards+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openPanelSaved('+idx+')">상세</button>';
         cards+='<button class="btn btn-success btn-sm" data-id="'+l._id+'" onclick="event.stopPropagation();qsReach(this)">📞 연락</button>';
         cards+='</div></div>';
       });
@@ -921,7 +921,7 @@ async function loadToday(){
     var frows='';
     fu.forEach(function(l){
       var idx=all.findIndex(function(x){return x._id===l._id;});
-      frows+='<tr onclick="openPanelSaved(&apos;+idx+&apos;)">';
+      frows+='<tr onclick="openPanelSaved('+idx+')">';
       frows+='<td>'+gb(l.grade)+'</td>';
       frows+='<td><div style="font-weight:700;font-size:12px;color:var(--text)">'+(l.name||'').slice(0,26)+'</div></td>';
       frows+='<td>'+stBadge(l.status||'연락전')+'</td>';
@@ -965,7 +965,7 @@ async function loadPipeline(){
       items.forEach(function(l){
         var idx=all.findIndex(function(x){return x._id===l._id;});
         var curIdx=STATUSES.indexOf(s);
-        colsHtml+='<div class="kcard" onclick="openPanelSaved(&apos;+idx+&apos;)">';
+        colsHtml+='<div class="kcard" onclick="openPanelSaved('+idx+')">';
         colsHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+gb(l.grade)+'<span style="font-size:9px;font-weight:800;color:var(--text3)">'+l.score+'점</span></div>';
         colsHtml+='<div class="kcard-name">'+escH((l.name||'').slice(0,40))+'</div>';
         colsHtml+='<div class="kcard-org">🏢 '+(l.org||'—').slice(0,20)+'</div>';
@@ -1013,7 +1013,7 @@ function filterLeads(){
   list.forEach(function(l){
     var idx=savedLeads.findIndex(function(x){return x._id===l._id;});
     var fu2=isFollowup(l)?'class="followup-alert"':'';
-    rows+='<tr '+fu2+' onclick="openPanelSaved(&apos;+idx+&apos;)">';
+    rows+='<tr '+fu2+' onclick="openPanelSaved('+idx+')">';
     rows+='<td>'+gradeCol(l.grade,l.score)+'</td>';
     rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:1px">'+(l.name||'').slice(0,28)+(isFollowup(l)?'<span style="font-size:10px;color:var(--danger);margin-left:5px">⚠️</span>':'')+'</div><div style="font-size:11px;color:var(--text3)">🏢 '+(l.org||'—')+'</div></td>';
     rows+='<td>'+tb(l.type)+'</td><td>'+stBadge(l.status||'연락전')+'</td>';
@@ -1021,7 +1021,7 @@ function filterLeads(){
     rows+='<td style="font-size:11px;color:var(--text3)">'+(l.field||'—')+'</td>';
     rows+='<td style="font-weight:700;color:var(--text)">'+fa(l.amount)+'</td>';
     rows+='<td style="font-size:11px;color:var(--text3)">'+(l.savedAt&&l.savedAt.toDate?l.savedAt.toDate().toLocaleDateString('ko-KR'):'—')+'</td>';
-    rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt(&apos;+idx+&apos;)">🗑️</span></td></tr>';
+    rows+='<td><span class="delete-action" onclick="event.stopPropagation();delPrompt('+idx+')">🗑️</span></td></tr>';
   });
   // DocumentFragment로 한번에 DOM 삽입
   var frag=document.createDocumentFragment();
@@ -1177,7 +1177,9 @@ async function fetchLeads() {
   async function callPage(pg) {
     var curUrls = eps.map(function(ep){ return { ep:ep, url: BASE + ep + '?' + makeQs(pg, API_MAX) }; });
     var res = await Promise.allSettled(curUrls.map(function(o){
-      return fetch(o.url, {signal: AbortSignal.timeout(20000)})
+      // 나라장터 API CORS 우회: allorigins 프록시 경유
+      var proxied = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(o.url);
+      return fetch(proxied, {signal: AbortSignal.timeout(20000)})
         .then(function(r){ return r.text(); })
         .then(function(t){ return {ep:o.ep, txt:t}; });
     }));
@@ -1602,7 +1604,7 @@ function openPanel(l,src,i){
   html+='<div class="sec-h">선정 근거</div>';
   if(l.reasons&&l.reasons.length){l.reasons.forEach(function(r){html+='<div class="pt"><div class="pd"></div><span>'+r+'</span></div>';});}
   else html+='<div style="font-size:12px;color:var(--text3)">기본 조달 활동 확인</div>';
-  html+='<div class="sec-h">점수 상세 <span style="font-size:9px;color:var(--blue);cursor:pointer" onclick="openScoreModal(&apos;+i+&apos;,&apos;+(src===&apos;search&apos;?0:1)+&apos;)">→ 상세</span></div>';
+  html+='<div class="sec-h">점수 상세 <span style="font-size:9px;color:var(--blue);cursor:pointer" onclick="openScoreModal('+i+',&apos;+(src===&apos;search&apos;?0:1)+&apos;)">→ 상세</span></div>';
   html+=buildSBD(l);
   html+='<div class="sec-h">핵심 영업 포인트</div>';
   var pts=['조달청·나라장터 즉시 제출 가능','기업 규모 무관 단일 수수료','신청 당일 신속 발급'];
@@ -1615,8 +1617,8 @@ function openPanel(l,src,i){
   html+='<div id="ts" style="display:none"><div class="msg-box" id="sc-ts"><button class="copy-btn" onclick="copyMsg(\"sc-ts\")">복사</button>'+bSMS(l)+'</div></div>';
   html+='<div id="te" style="display:none"><div class="msg-box" id="sc-te"><button class="copy-btn" onclick="copyMsg(\"sc-te\")">복사</button>'+bEmail(l)+'</div></div>';
   html+='<div style="display:flex;gap:8px;margin-top:16px">';
-  if(src==='search'&&!l.isDup) html+='<button class="btn btn-primary" style="flex:1" onclick="saveLead(&apos;+i+&apos;)">💾 저장</button>';
-  if(src==='saved') html+='<button class="btn btn-danger" onclick="delPromptIdx(&apos;+i+&apos;)">🗑️ 삭제</button>';
+  if(src==='search'&&!l.isDup) html+='<button class="btn btn-primary" style="flex:1" onclick="saveLead('+i+')">💾 저장</button>';
+  if(src==='saved') html+='<button class="btn btn-danger" onclick="delPromptIdx('+i+')">🗑️ 삭제</button>';
   html+='<button class="btn btn-sec" onclick="closePanel()">닫기</button></div>';
   document.getElementById('panel-body').innerHTML=html;
   document.getElementById('panel').classList.add('open');
