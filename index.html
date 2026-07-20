@@ -1137,21 +1137,21 @@ async function fetchLeads() {
 
   // ─ 엔드포인트 설정
   var BASE_SCSBID  = 'https://apis.data.go.kr/1230000/as/ScsbidInfoService/';
-  var BASE_CNTRCT  = 'https://apis.data.go.kr/1230000/ao/CntrctInfoService/';
+  var BASE_CNTRCT  = 'https://apis.data.go.kr/1230000/as/ScsbidInfoService/';
 
   // 낙찰정보 엔드포인트
-  // 입찰공고 API 엔드포인트 (낙찰/계약 API는 CORS 차단됨 → 입찰공고로 대체)
+  // 낙찰정보 API 엔드포인트 (문서 v1.1 기준)
   var epMapScsbid = {
-    '1': 'getBidPblancListInfoCnstwk',  // 공사 입찰공고
-    '2': 'getBidPblancListInfoServc',   // 용역 입찰공고
-    '3': 'getBidPblancListInfoThng',    // 물품 입찰공고
-    '': 'getBidPblancListInfoServc',    // 기본값
+    '1': 'getScsbidListSttusCnstwk',   // 공사
+    '2': 'getScsbidListSttusServc',    // 용역
+    '3': 'getScsbidListSttusThng',     // 물품
+    '':  'getScsbidListSttusServc',    // 기본(용역)
   };
   var epMapCntrct = {
-    '1': 'getBidPblancListInfoCnstwk',
-    '2': 'getBidPblancListInfoServc',
-    '3': 'getBidPblancListInfoThng',
-    '': 'getBidPblancListInfoServc',
+    '1': 'getScsbidListSttusCnstwk',
+    '2': 'getScsbidListSttusServc',
+    '3': 'getScsbidListSttusThng',
+    '':  'getScsbidListSttusServc',
   };
 
   var BASE = src === 'scsbid' ? BASE_SCSBID : BASE_CNTRCT;
@@ -1163,13 +1163,13 @@ async function fetchLeads() {
 
   // ─ 공통 쿼리스트링
   function makeQs(pg, rows) {
-    var qs = 'serviceKey=' + API_KEY +
+    // 문서 기준: ServiceKey (대문자S), 날짜 YYYYMMDDHHMM(12자리)
+    var qs = 'ServiceKey=' + API_KEY +
       '&pageNo=' + pg + '&numOfRows=' + rows + '&type=json' +
       '&inqryDiv=1' +
       '&inqryBgnDt=' + start + '0000' +
       '&inqryEndDt=' + end + '2359';
-    if (bidType) qs += '&bidClsfcNo=' + bidType;
-    if (keyword)  qs += '&bidNtceNm=' + encodeURIComponent(keyword);
+    if (keyword) qs += '&bidNtceNm=' + encodeURIComponent(keyword);
     return qs;
   }
 
