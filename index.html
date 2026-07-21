@@ -91,7 +91,29 @@ main{margin-left:240px;flex:1;padding:30px 34px;position:relative;z-index:1}
 .sec-action:hover{text-decoration:underline}
 
 /* TOP3 */
-.top3-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px}
+.top3-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:26px}
+/* ─ 포디움 랭킹 카드 ─ */
+.podium-card{position:relative;background:var(--surface);border:2px solid var(--border);border-radius:18px;padding:26px 20px 18px;cursor:pointer;transition:all .25s;box-shadow:var(--shadow)}
+.podium-card:hover{transform:translateY(-5px);box-shadow:0 14px 36px rgba(26,111,232,.16)}
+.podium-card.rank-1{border-color:#F0B93B;box-shadow:0 0 0 1px rgba(240,185,59,.25),0 10px 30px rgba(240,185,59,.14)}
+.podium-card.rank-2{border-color:#A8B4C4;box-shadow:0 0 0 1px rgba(168,180,196,.25),0 8px 24px rgba(168,180,196,.12)}
+.podium-card.rank-3{border-color:#CB8D52;box-shadow:0 0 0 1px rgba(203,141,82,.25),0 8px 24px rgba(203,141,82,.12)}
+.podium-rank{position:absolute;top:-16px;left:18px;width:36px;height:42px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;color:#fff;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);filter:drop-shadow(0 3px 6px rgba(0,0,0,.25))}
+.rank-1 .podium-rank{background:linear-gradient(135deg,#F7CD5A,#E09B12)}
+.rank-2 .podium-rank{background:linear-gradient(135deg,#C2CDD9,#8A98A9)}
+.rank-3 .podium-rank{background:linear-gradient(135deg,#DCA26B,#A96A2E)}
+.podium-name{font-size:16.5px;font-weight:800;color:var(--text);margin-bottom:4px;line-height:1.35;padding-right:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.podium-org{font-size:11px;color:var(--text3);margin-bottom:12px}
+.podium-score-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.podium-score{font-size:38px;font-weight:900;color:var(--blue);line-height:1}
+.podium-score small{font-size:14px;font-weight:700;color:var(--text3)}
+.podium-reasons{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;min-height:52px}
+.podium-reason{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:var(--text2);line-height:1.5}
+.podium-reason .ico{flex-shrink:0;width:17px;height:17px;border-radius:50%;background:rgba(26,111,232,.1);display:flex;align-items:center;justify-content:center;font-size:10px;margin-top:1px}
+.podium-point{border:1.6px solid var(--blue);border-radius:11px;padding:9px 12px;text-align:center;background:rgba(26,111,232,.04);margin-bottom:12px}
+.podium-point-lbl{font-size:9px;font-weight:800;color:var(--blue);letter-spacing:.08em;margin-bottom:3px}
+.podium-point-val{font-size:13px;font-weight:800;color:var(--text)}
+@media(max-width:900px){.top3-grid{grid-template-columns:1fr}}
 .top3-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden;cursor:pointer;transition:all .25s;box-shadow:var(--shadow)}
 .top3-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:rgba(26,111,232,.3)}
 .top3-rank{position:absolute;top:14px;right:16px;font-size:28px;font-weight:900;color:var(--border);font-family:'Inter',sans-serif}
@@ -302,10 +324,11 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 
 <div class="app">
 <aside>
+  <div class="sb-label">Search</div>
+  <button class="nav" onclick="showPage(&apos;search&apos;,this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
   <div class="sb-label">Intelligence</div>
   <button class="nav active" onclick="showPage(&apos;dashboard&apos;,this)"><span class="nav-icon">📊</span>대시보드</button>
   <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
-  <button class="nav" onclick="showPage(&apos;search&apos;,this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
   <button class="nav" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
   <button class="nav" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
   <div class="sb-label">System</div>
@@ -330,6 +353,10 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <div class="chart-grid">
     <div class="chart-card"><div class="chart-title">등급별 분포</div><div id="grade-chart"></div></div>
     <div class="chart-card"><div class="chart-title">파이프라인 현황</div><div id="pipeline-chart"></div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card"><div class="chart-title">🏆 TOP 10 기업 <span style="font-size:9px;color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">점수순</span></div><div id="top10-list" style="margin-top:8px"></div></div>
+    <div class="chart-card"><div class="chart-title">🕐 최근 조회 이력 <span style="font-size:9px;color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">최근 5건</span></div><div id="search-history-list" style="margin-top:8px"></div></div>
   </div>
   <div class="sec">최근 저장 기업 <span class="sec-action" onclick="showPage(&apos;leads&apos;,document.querySelectorAll(&apos;.nav&apos;)[4])">전체 보기 →</span></div>
   <div class="tbl-wrap"><table>
@@ -845,6 +872,8 @@ async function loadDashboard(){
     document.getElementById('k-followup').textContent=fu;
     setFbOk(all.length,aLen,fu);
     renderCharts(all);
+    renderTop10(all);
+    renderSearchHistory();
     if(!all.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ei">🚀</span><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">[잠재고객 발굴] 탭에서 시작하세요</div></div></td></tr>';return;}
     var rows='';
     all.slice(0,8).forEach(function(l,i){
@@ -863,6 +892,51 @@ async function loadDashboard(){
     console.error('[LeadGrade] loadDashboard 오류:', e.code, e.message, e.stack);
     setFbErr(e.code||'error', e.message||String(e));
     tbody.innerHTML='<tr><td colspan="8">'+errHtml(e)+'</td></tr>';
+  }
+}
+
+function renderTop10(all){
+  var el=document.getElementById('top10-list');
+  if(!el) return;
+  var top=all.slice().sort(function(a,b){return (b.score||0)-(a.score||0);}).slice(0,10);
+  if(!top.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">저장된 기업이 없습니다</div>';return;}
+  var h='';
+  top.forEach(function(l,i){
+    var idx=_allLeads.findIndex(function(x){return x._id===l._id;});
+    var rankCol=i===0?'#E09B12':i===1?'#8A98A9':i===2?'#A96A2E':'var(--text3)';
+    h+='<div onclick="openPanelSaved('+idx+')" style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer">';
+    h+='<span style="width:22px;text-align:center;font-weight:900;font-size:13px;color:'+rankCol+'">'+(i+1)+'</span>';
+    h+='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(l.name||'')+'</div><div style="font-size:9.5px;color:var(--text3)">'+escH((l.org||'—').slice(0,20))+'</div></div>';
+    h+=gb(l.grade);
+    h+='<span style="font-weight:800;font-size:13px;color:var(--blue);width:34px;text-align:right">'+l.score+'</span>';
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+
+async function renderSearchHistory(){
+  var el=document.getElementById('search-history-list');
+  if(!el) return;
+  try{
+    var snap=await db.collection('searchHistory').orderBy('ts','desc').limit(5).get();
+    if(snap.empty){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">조회 이력이 없습니다<br><span style="font-size:10px">잠재고객 발굴에서 수집하면 자동 기록됩니다</span></div>';return;}
+    var h='';
+    snap.docs.forEach(function(d){
+      var v=d.data();
+      var t=v.ts&&v.ts.toDate?v.ts.toDate():null;
+      var ts=t?(t.getMonth()+1)+'/'+t.getDate()+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'):'—';
+      h+='<div style="padding:8px 4px;border-bottom:1px solid var(--border)">';
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">';
+      h+='<span style="font-size:10px;font-weight:800;color:var(--blue);background:rgba(26,111,232,.08);padding:2px 7px;border-radius:5px">'+v.src+'</span>';
+      h+='<span style="font-size:11px;font-weight:700;color:var(--text)">'+(v.field||'전체')+(v.keyword?' · "'+escH(v.keyword)+'"':'')+'</span>';
+      h+='<span style="font-size:9.5px;color:var(--text3);margin-left:auto">'+ts+'</span></div>';
+      h+='<div style="font-size:10.5px;color:var(--text2)">업체 <b>'+v.companies+'</b>개사 — <span style="color:var(--gold);font-weight:700">A:'+v.aCount+'</span> B:'+v.bCount+' C:'+v.cCount+' | 최근 '+v.days+'일</div>';
+      h+='</div>';
+    });
+    el.innerHTML=h;
+  }catch(e){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-size:11px">이력 로드 실패</div>';
+    console.warn('이력 로드', e);
   }
 }
 
@@ -886,6 +960,16 @@ function renderCharts(all){
 }
 
 // ═══ 오늘의 영업 ═══
+function salesPoint(l){
+  if((l.method||'').indexOf('적격')>=0) return '신용평가서 필수 — 즉시 제안';
+  if(l.type==='갱신형') return '갱신 상담 적기';
+  if(l.type==='집중관리형') return '반복 낙찰 — 정기 수요 유력';
+  if(l.timingClass==='timing-urgent') return '골든타임 — 3일 내 연락';
+  if((l.bidCount||1)>=2) return '복수 낙찰 — 수요 지속';
+  if(l.grade==='A') return '고득점 — 우선 제안 대상';
+  return '신규 발굴 — 첫 제안 기회';
+}
+
 async function loadToday(){
   try{
     var all=await fbGet(); savedLeads=all; _allLeads=all;
@@ -898,20 +982,23 @@ async function loadToday(){
       document.getElementById('top3-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)"><span class="ei">📭</span><div>저장된 A등급 기업이 없습니다</div></div>';
     } else {
       brief.innerHTML='오늘 연락 권장 <b style="color:var(--gold)">'+top.length+'개사</b> 선정. 최우선: <b style="color:var(--text)">'+( top[0].name||'').slice(0,20)+'</b> ('+top[0].score+'점).'+(fu.length>0?' <span style="color:var(--danger)">⚠️ 팔로업 '+fu.length+'건.</span>':'');
-      var medals=['medal-1','medal-2','medal-3'];
       var cards='';
       top.forEach(function(l,i){
         var idx=all.findIndex(function(x){return x._id===l._id;});
-        cards+='<div class="top3-card" onclick="openPanelSaved('+idx+')">';
-        cards+='<div class="top3-rank">'+(i+1)+'</div>';
-        cards+='<div class="top3-medal '+medals[i]+'">'+['🥇','🥈','🥉'][i]+'</div>';
-        cards+='<div class="top3-name">'+escH(l.name||'')+'</div>';
-        cards+='<div class="top3-org">🏢 '+(l.org||'—')+'</div>';
-        cards+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="top3-score">'+l.score+'</div>'+gb(l.grade)+' '+tb(l.type)+'</div>';
-        cards+=stBadge(l.status||'연락전');
-        cards+='<div style="display:flex;gap:6px;margin-top:12px">';
-        cards+='<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openPanelSaved('+idx+')">상세</button>';
-        cards+='<button class="btn btn-success btn-sm" data-id="'+l._id+'" onclick="event.stopPropagation();qsReach(this)">📞 연락</button>';
+        var rsn=(l.reasons||[]).slice(0,2);
+        while(rsn.length<2) rsn.push(l.type==='갱신형'?'기존 이용 이력 보유':'최근 조달 활동 확인');
+        cards+='<div class="podium-card rank-'+(i+1)+'" onclick="openPanelSaved('+idx+')">';
+        cards+='<div class="podium-rank">'+(i+1)+'</div>';
+        cards+='<div class="podium-name">'+escH(l.name||'')+'</div>';
+        cards+='<div class="podium-org">🏢 '+escH((l.org||'—').slice(0,26))+' · '+(l.field||'—')+'</div>';
+        cards+='<div class="podium-score-row"><div class="podium-score">'+l.score+'<small>점</small></div>'+gb(l.grade)+tb(l.type)+'</div>';
+        cards+='<div class="podium-reasons">';
+        rsn.forEach(function(r){cards+='<div class="podium-reason"><span class="ico">✓</span><span>'+escH(r.slice(0,34))+'</span></div>';});
+        cards+='</div>';
+        cards+='<div class="podium-point"><div class="podium-point-lbl">추천 영업 포인트</div><div class="podium-point-val">'+salesPoint(l)+'</div></div>';
+        cards+='<div style="display:flex;gap:6px">';
+        cards+='<button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();openPanelSaved('+idx+')">상세</button>';
+        cards+='<button class="btn btn-success btn-sm" style="flex:1" data-id="'+l._id+'" onclick="event.stopPropagation();qsReach(this)">📞 연락</button>';
         cards+='</div></div>';
       });
       document.getElementById('top3-grid').innerHTML=cards;
@@ -1112,6 +1199,7 @@ function setSrc(src, btn) {
 
 // ═══ 낙찰/계약 수집 메인 ═══
 async function fetchLeads() {
+  window._isMock = false;
   var bidType   = document.getElementById('bid-type').value;
   var keyword   = document.getElementById('keyword').value.trim();
   var numRowsVal= document.getElementById('num-rows').value;
@@ -1263,6 +1351,7 @@ async function fetchLeads() {
 
   if (!allItems.length) {
     log('⚠️ 수집 결과 없음 → 목업 데이터 표시');
+    window._isMock = true;
     searchLeads = getMock();
     markDupCheck();
     finishFetch(btn);
@@ -1329,6 +1418,24 @@ function finishFetch(btn) {
   var bCount  = searchLeads.filter(function(l){ return l.grade === 'B'; }).length;
   var cCount  = searchLeads.filter(function(l){ return l.grade === 'C'; }).length;
   var dupCount= searchLeads.filter(function(l){ return l.isDup; }).length;
+  // ─ 조회 이력 Firebase 저장 (목업 제외)
+  if (!window._isMock && searchLeads.length > 0) {
+    try {
+      var topC = searchLeads.slice().sort(function(a,b){return b.score-a.score;}).slice(0,5)
+        .map(function(l){return {name:l.name||'',score:l.score||0,grade:l.grade||'C',amount:l.amount||0};});
+      var btSel = document.getElementById('bid-type');
+      db.collection('searchHistory').add({
+        ts: firebase.firestore.FieldValue.serverTimestamp(),
+        src: _currentSrc === 'scsbid' ? '낙찰정보' : '계약정보',
+        field: btSel.options[btSel.selectedIndex].text,
+        keyword: document.getElementById('keyword').value.trim() || '',
+        days: parseInt(document.getElementById('date-range').value),
+        companies: searchLeads.length,
+        aCount: aCount, bCount: bCount, cCount: cCount,
+        top: topC
+      }).catch(function(e){ console.warn('이력 저장 실패', e); });
+    } catch(e) { console.warn('이력 저장 오류', e); }
+  }
   log('✅ 완료 | 업체 ' + searchLeads.length + '개사 | A:' + aCount + ' B:' + bCount + ' C:' + cCount + ' | 중복:' + dupCount);
   document.getElementById('lead-badge').textContent = searchLeads.length;
   if (aCount > 0) document.getElementById('save-all-btn').style.display = '';
@@ -1352,7 +1459,7 @@ function updateDashBanner(leads) {
   d.innerHTML = '<span style="font-size:13px;font-weight:800;color:var(--blue)">🏆 최근 수집</span>' +
     '<span style="font-size:13px;color:var(--text2)">총 <b style="color:var(--text)">' + leads.length + '</b>개사</span>' +
     '<span class="grade gA">A</span><b style="color:var(--text)">' + aLen + '개사</b>' +
-    '<button class="btn btn-primary btn-sm" onclick="showPage(&apos;search&apos;,document.querySelectorAll(&apos;.nav&apos;)[2])">결과 보기 →</button>' +
+    '<button class="btn btn-primary btn-sm" onclick="showPage(&apos;search&apos;,document.querySelectorAll(&apos;.nav&apos;)[0])">결과 보기 →</button>' +
     '<button onclick="clearSearchBanner()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;margin-left:auto">✕</button>';
   b.appendChild(d);
 }
