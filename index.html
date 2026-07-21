@@ -669,6 +669,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 // ═══ 전역 상태 ═══
 var API_KEY='5e28545eb4cc2148cc0a3dc9eb8d273018db18537aa28ed21e7983ed66363aef';
 var searchLeads=[], savedLeads=[], _allLeads=[], internalDB=[];
+var CUSTOMER_SET = new Set(); // 설정 탭 CSV 업로드 시 사업자번호로 채워짐
 var sortKey='', sortDir=-1;
 var STATUSES=['연락전','연락중','미팅예정','계약성공','보류'];
 
@@ -1162,7 +1163,7 @@ async function fetchLeads() {
     var raw = await naraFetch('BidPublicInfoService', ep, makeBidQs(1));
     var its = raw.filter(function(b) {
       // 마감일이 오늘 이후인 것만 — 날짜를 YYYYMMDD(하이픈 없음)로 통일해서 비교
-      var cl = b.bidClseDate || b.bidNtceDt || '';
+      var cl = b.bidClseDt || b.bidNtceDt || '';
       if (!cl) return true; // 날짜 없으면 포함
       var dt = cl.slice(0,10).replace(/-/g,'').replace(/\./g,'');
       return dt.length < 8 || dt >= today;
@@ -1268,7 +1269,7 @@ async function fetchLeads() {
   }
 
   // ─ STEP 4: 입찰공고 × 낙찰업체 매칭 신뢰도 기반 점수 산정
-  log('⚡ STEP 4 — 매칭 신뢰도 분석 + 점수 산정 중...');
+  log('⚡ STEP 4 — 매칭 신뢰도 분석 중... (공고 ' + bidItems.length + '건 × 업체 ' + compKeys.length + '개사)');
   var resultItems = [];
   var usedPerBid = 3;  // 공고당 상위 3개사
 
@@ -1278,7 +1279,7 @@ async function fetchLeads() {
     var bidToks = tokenize(bid.bidNtceNm || '');
 
     // 마감 D-day
-    var clDt  = bid.bidClseDate || bid.opengDt || '';
+    var clDt  = bid.bidClseDt || bid.opengDt || '';
     var clDay = 30;
     if (clDt) {
       var clNorm = clDt.slice(0,10).replace(/\./g,'-');
@@ -1383,6 +1384,7 @@ async function fetchLeads() {
     });
   });
 
+  log('📊 공고×업체 매칭 완료: ' + resultItems.length + '건');
   // ─ 입찰공고 매칭이 하나도 안 된 경우: 반복 낙찰업체 폴백 (분야만 일치도 포함)
   if (resultItems.length < 10) {
     Object.values(compMap)
