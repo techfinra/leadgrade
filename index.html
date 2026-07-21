@@ -1241,7 +1241,8 @@ async function fetchLeads() {
   document.getElementById('save-all-btn').style.display = 'none';
 
   var today   = dateStr(0);
-  var yr1ago  = dateStr(-365);   // 낙찰이력 1년치
+  var yr1ago  = dateStr(-365);   // 낙찰이력 목표 1년 (API는 90일씩 분할 수집)
+  var d90ago  = dateStr(-90);    // API 최대 허용 범위
 
   // ─ Vercel 프록시 공통 호출
   async function naraFetch(svc, ep, qs) {
@@ -1271,7 +1272,7 @@ async function fetchLeads() {
     return 'ServiceKey=' + API_KEY +
       '&pageNo=' + pg + '&numOfRows=' + API_MAX + '&type=json' +
       '&inqryDiv=1' +
-      '&inqryBgnDt=' + yr1ago + '0000' +
+      '&inqryBgnDt=' + d90ago + '0000' +
       '&inqryEndDt=' + today  + '2359' +
       (keyword ? '&bidNtceNm=' + encodeURIComponent(keyword) : '');
   }
@@ -1296,42 +1297,46 @@ async function fetchLeads() {
   var scsbidEpMap = { '1':'getScsbidListSttusCnstwk', '2':'getScsbidListSttusServc', '3':'getScsbidListSttusThng' };
   var scsbidEps   = bidType ? [scsbidEpMap[bidType]] : ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng'];
 
-  function makeScsbidQs(pg) {
+  // 낙찰이력: 90일씩 4분기로 나눠 1년치 수집
+  var quarters = [
+    { bgn: dateStr(-90),  end: today        },
+    { bgn: dateStr(-180), end: dateStr(-91) },
+    { bgn: dateStr(-270), end: dateStr(-181)},
+    { bgn: dateStr(-365), end: dateStr(-271)},
+  ];
+
+  function makeScsbidQs(pg, bgn, end2) {
     return 'ServiceKey=' + API_KEY +
       '&pageNo=' + pg + '&numOfRows=' + API_MAX + '&type=json' +
       '&inqryDiv=1' +
-      '&inqryBgnDt=' + yr1ago + '0000' +
-      '&inqryEndDt=' + today  + '2359';
+      '&inqryBgnDt=' + bgn  + '0000' +
+      '&inqryEndDt=' + end2 + '2359';
   }
 
   var scsbidItems = [];
-  await Promise.all(scsbidEps.map(async function(ep) {
-    // 1페이지 먼저
-    var pg1 = await naraFetch('ScsbidInfoService', ep, makeScsbidQs(1));
-    scsbidItems = scsbidItems.concat(pg1);
-    // totalCount 확인해서 최대 5페이지까지
-    try {
-      var sampleQs = makeScsbidQs(1);
-      var proxyUrl = '/api/nara?' + sampleQs + '&_ep=' + ep + '&_svc=ScsbidInfoService';
-      var r = await fetch(proxyUrl, {signal: AbortSignal.timeout(15000)});
-      var txt = await r.text();
-      var j = JSON.parse(txt);
-      var body = (j.response && j.response.body) || j.body || {};
-      var tc = parseInt(body.totalCount) || 0;
-      var pages = Math.min(Math.ceil(tc / API_MAX), isAll ? 50 : Math.ceil(perPage / API_MAX));
-      if (pages > 1) {
-        log('[낙찰/' + ep.replace('getScsbidListSttus','') + '] 총 ' + tc + '건 → ' + pages + '페이지');
+  for (var qi = 0; qi < quarters.length; qi++) {
+    var q = quarters[qi];
+    btn.textContent = '⏳ 낙찰이력 ' + (qi+1) + '/4분기...';
+    await Promise.all(scsbidEps.map(async function(ep) {
+      var its = await naraFetch('ScsbidInfoService', ep, makeScsbidQs(1, q.bgn, q.end));
+      scsbidItems = scsbidItems.concat(its);
+      // 페이지네이션
+      try {
+        var j    = JSON.parse(await (await fetch('/api/nara?' + makeScsbidQs(1, q.bgn, q.end) + '&_ep=' + ep + '&_svc=ScsbidInfoService')).text());
+        var body = (j.response && j.response.body) || j.body || {};
+        var tc   = parseInt(body.totalCount) || 0;
+        var pages = Math.min(Math.ceil(tc / API_MAX), 5);
         for (var pg2 = 2; pg2 <= pages; pg2++) {
-          if (scsbidItems.length >= perPage * 3) break;
-          btn.textContent = '⏳ 낙찰이력 ' + pg2 + '/' + pages + 'p...';
-          var more = await naraFetch('ScsbidInfoService', ep, makeScsbidQs(pg2));
+          if (scsbidItems.length >= perPage * 4) break;
+          var more = await naraFetch('ScsbidInfoService', ep, makeScsbidQs(pg2, q.bgn, q.end));
           if (!more.length) break;
           scsbidItems = scsbidItems.concat(more);
         }
-      }
-    } catch(e) {}
-    log('[낙찰/' + ep.replace('getScsbidListSttus','') + '] ' + pg1.length + '건');
-  }));
+      } catch(e) {}
+    }));
+    log('[낙찰 ' + (qi+1) + '/4분기] 누적 ' + scsbidItems.length + '건');
+    if (scsbidItems.length >= perPage * 4) break;
+  }
   log('🏅 낙찰이력 총 ' + scsbidItems.length + '건');
 
   if (!bidItems.length && !scsbidItems.length) {
