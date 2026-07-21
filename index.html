@@ -1254,13 +1254,25 @@ async function fetchLeads() {
       });
     var txt = await r.text();
     if (!txt || txt.length < 50) return [];
-    if (txt.indexOf('_debug') >= 0) { try { var d=JSON.parse(txt); log('⚠️ 서버오류: '+d._status); } catch(e){} return []; }
+    // 에러 응답 체크
+    if (txt.indexOf('ResponseError') >= 0 || txt.indexOf('resultCode') >= 0) {
+      try {
+        var ej = JSON.parse(txt);
+        var eh = (ej['nkoneps.com.response.ResponseError'] || {}).header || {};
+        log('⚠️ API 오류 ['+svc+'/'+ep+']: ' + (eh.resultCode||'?') + ' — ' + (eh.resultMsg||txt.slice(0,80)));
+      } catch(e) { log('⚠️ 에러응답: ' + txt.slice(0,100)); }
+      return [];
+    }
+    if (txt.indexOf('_debug') >= 0) { try { var d=JSON.parse(txt); log('⚠️ 서버오류: '+d._status+' path:'+d._path); } catch(e){} return []; }
     try {
       var j    = JSON.parse(txt);
       var body = (j.response && j.response.body) || j.body || j;
       var bi   = body.items;
-      return Array.isArray(bi) ? bi : (bi && bi.item ? (Array.isArray(bi.item) ? bi.item : [bi.item]) : []);
-    } catch(e) { return []; }
+      var its  = Array.isArray(bi) ? bi : (bi && bi.item ? (Array.isArray(bi.item) ? bi.item : [bi.item]) : []);
+      // 디버그: 첫 아이템 키 확인
+      if (its.length > 0) log('✅ 파싱성공 ['+ep.slice(-6)+']: ' + its.length + '건, 첫항목키=' + Object.keys(its[0]).slice(0,4).join(','));
+      return its;
+    } catch(e) { log('❌ 파싱실패: ' + e.message + ' | ' + txt.slice(0,100)); return []; }
   }
 
   // ─ STEP 1: 현재 입찰공고 수집 (마감일 > 오늘)
