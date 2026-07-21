@@ -1224,9 +1224,9 @@ async function fetchLeads() {
     searchLeads = getMock(); markDupCheck(); finishFetch(btn); return;
   }
 
-  // ─ STEP 3: 낙찰이력 업체별 집계 (사업자번호 기준)
-  log('🔗 STEP 3 — 업체 크로스매칭 중...');
-  var compMap = {};  // { bizno: { nm, bizno, count, totalAmt, fields:Set, lastDate } }
+  // ─ STEP 3: 낙찰이력 업체별 집계 (사업자번호 기준 + 기관/공고명 이력 보존)
+  log('🔗 STEP 3 — 업체별 낙찰이력 집계 중...');
+  var compMap = {};  // { key: { nm, bizno, count, totalAmt, fields:Set, orgs:Set, bidNames:[], lastDate } }
   scsbidItems.forEach(function(s) {
     var bizno = s.bidwinnrBizno || s.sucsfbidCorpBizno || '';
     var nm    = s.bidwinnrNm    || s.sucsfbidCorpNm    || '';
@@ -1235,114 +1235,155 @@ async function fetchLeads() {
     var amt = parseFloat(s.sucsfbidAmt || 0);
     var dt  = s.fnlSucsfDate || s.rlOpengDt || s.rgstDt || '';
     var fld = s.bidClsfcNo || '';
+    var org = s.dminsttNm || '';
+    var bnm = s.bidNtceNm || '';
     if (!compMap[key]) {
-      compMap[key] = { nm:nm, bizno:bizno, count:0, totalAmt:0, fields:new Set(), lastDate:dt };
+      compMap[key] = { nm:nm, bizno:bizno, count:0, totalAmt:0, fields:new Set(), orgs:new Set(), bidNames:[], lastDate:dt };
     }
     var m = compMap[key];
     m.count++;
     m.totalAmt += amt;
     if (fld) m.fields.add(fld);
+    if (org) m.orgs.add(org);
+    if (bnm && m.bidNames.length < 30) m.bidNames.push(bnm);
     if (dt > m.lastDate) m.lastDate = dt;
   });
+  var compKeys = Object.keys(compMap);
+  log('🏢 낙찰이력 업체 ' + compKeys.length + '개사 집계 완료');
 
-  // ─ STEP 4: 입찰공고 × 낙찰이력 크로스매칭 → 점수 산정
-  log('⚡ STEP 4 — 점수 산정 중...');
+  // ─ 공고명 토큰화 (2글자 이상 단어)
+  function tokenize(s) {
+    return (s || '').split(/[\s\(\)\[\]\-_,·.]+/).filter(function(t){ return t.length >= 2; });
+  }
+  // 두 공고명 토큰 겹침률 (0~1)
+  function nameSim(tokensA, nameB) {
+    if (!tokensA.length) return 0;
+    var tb = tokenize(nameB);
+    if (!tb.length) return 0;
+    var setB = {};
+    tb.forEach(function(t){ setB[t] = 1; });
+    var hit = 0;
+    tokensA.forEach(function(t){ if (setB[t]) hit++; });
+    return hit / Math.min(tokensA.length, tb.length);
+  }
+
+  // ─ STEP 4: 입찰공고 × 낙찰업체 매칭 신뢰도 기반 점수 산정
+  log('⚡ STEP 4 — 매칭 신뢰도 분석 + 점수 산정 중...');
   var resultItems = [];
-
-  // 낙찰이력 있는 공고 분야별 인기 업체
-  var fieldCompMap = {};  // { bidClsfcNo: [compKey sorted by count] }
-  Object.keys(compMap).forEach(function(k) {
-    compMap[k].fields.forEach(function(f) {
-      if (!fieldCompMap[f]) fieldCompMap[f] = [];
-      fieldCompMap[f].push(k);
-    });
-  });
+  var usedPerBid = 3;  // 공고당 상위 3개사
 
   bidItems.forEach(function(bid) {
-    var fld = bid.bidClsfcNo || '';
-    // 이 공고 분야에 낙찰이력 있는 업체들 매칭
-    var matched = (fieldCompMap[fld] || fieldCompMap[''] || Object.keys(compMap))
-      .map(function(k) { return compMap[k]; })
-      .sort(function(a,b) { return b.count - a.count; })
-      .slice(0, 3);  // 공고당 상위 3개사
+    var fld     = bid.bidClsfcNo || '';
+    var bidOrg  = bid.ntceInsttNm || bid.dminsttNm || '';
+    var bidToks = tokenize(bid.bidNtceNm || '');
 
-    if (!matched.length) {
-      // 낙찰이력 없어도 공고 자체를 아이템으로 추가
-      matched = [{ nm: bid.ntceInsttNm || bid.dminsttNm || '발주기관', bizno:'', count:0, totalAmt:0, fields:new Set(), lastDate:'' }];
+    // 마감 D-day
+    var clDt  = bid.bidClseDate || bid.opengDt || '';
+    var clDay = 30;
+    if (clDt) {
+      var clNorm = clDt.slice(0,10).replace(/\./g,'-');
+      if (/^\d{8}$/.test(clNorm)) clNorm = clNorm.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3');
+      var t = new Date(clNorm).getTime();
+      if (!isNaN(t)) clDay = Math.ceil((t - Date.now()) / 86400000);
     }
 
-    matched.forEach(function(comp) {
-      var days = comp.lastDate ? Math.floor((Date.now() - new Date(comp.lastDate.slice(0,10)).getTime()) / 86400000) : 365;
-      // 마감 D-day
-      var clDt  = bid.bidClseDate || bid.opengDt || '';
-      var clDay = clDt ? Math.ceil((new Date(clDt.slice(0,10).replace(/\./g,'-').replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3')).getTime() - Date.now()) / 86400000) : 30;
+    // 모든 업체에 대해 매칭 신뢰도 계산
+    var scored = [];
+    compKeys.forEach(function(k) {
+      var comp = compMap[k];
+      var orgHit  = bidOrg && comp.orgs.has(bidOrg);
+      var simMax  = 0;
+      if (bidToks.length) {
+        for (var bi2 = 0; bi2 < comp.bidNames.length; bi2++) {
+          var sm = nameSim(bidToks, comp.bidNames[bi2]);
+          if (sm > simMax) simMax = sm;
+          if (simMax >= 0.5) break;
+        }
+      }
+      var nameHit = simMax >= 0.34;  // 토큰 1/3 이상 겹침
+      var fldHit  = fld && comp.fields.has(fld);
 
-      // 점수 산정
-      var bd = { 낙찰빈도:0, 분야매칭:0, 시급성:0, 금액규모:0, 이용여부:0 };
+      // ② 매칭 신뢰도 (30점)
+      var matchPt = 0, matchLbl = '';
+      if (orgHit && nameHit)      { matchPt = 30; matchLbl = '동일기관+유사공고 낙찰 이력'; }
+      else if (orgHit)            { matchPt = 20; matchLbl = '동일 수요기관 낙찰 이력'; }
+      else if (nameHit)           { matchPt = 13; matchLbl = '유사 공고명 낙찰 이력'; }
+      else if (fldHit)            { matchPt = 5;  matchLbl = '동일 분야 낙찰 이력'; }
+      else return;  // 아무 연결고리 없으면 이 공고엔 미매칭
+
+      scored.push({ comp: comp, matchPt: matchPt, matchLbl: matchLbl, orgHit: orgHit, nameHit: nameHit, simMax: simMax });
+    });
+
+    // 매칭 신뢰도 → 낙찰횟수 순 정렬, 공고당 상위 N개
+    scored.sort(function(a,b){ return b.matchPt - a.matchPt || b.comp.count - a.comp.count; });
+    scored.slice(0, usedPerBid).forEach(function(sc) {
+      var comp = sc.comp;
+      var bd = { 낙찰이력:0, 매칭신뢰도:0, 골든타임:0, 매출규모:0, 이용여부:0 };
       var reasons = [];
 
-      // ① 낙찰 빈도 (30점)
-      if (comp.count >= 5)      { bd.낙찰빈도 = 30; reasons.push('최근 1년 ' + comp.count + '회 낙찰 — 정기 참가업체'); }
-      else if (comp.count >= 3) { bd.낙찰빈도 = 22; reasons.push('최근 1년 ' + comp.count + '회 낙찰'); }
-      else if (comp.count >= 2) { bd.낙찰빈도 = 15; reasons.push('최근 1년 ' + comp.count + '회 낙찰'); }
-      else if (comp.count === 1){ bd.낙찰빈도 = 8;  reasons.push('최근 1년 1회 낙찰 이력'); }
+      // ① 낙찰 이력 강도 (25)
+      if      (comp.count >= 5) { bd.낙찰이력 = 25; reasons.push('최근 1년 ' + comp.count + '회 낙찰 — 정기 입찰 참가'); }
+      else if (comp.count >= 3) { bd.낙찰이력 = 19; reasons.push('최근 1년 ' + comp.count + '회 낙찰'); }
+      else if (comp.count >= 2) { bd.낙찰이력 = 13; reasons.push('최근 1년 2회 낙찰'); }
+      else                      { bd.낙찰이력 = 7;  reasons.push('최근 1년 1회 낙찰'); }
 
-      // ② 분야 매칭 (25점)
-      if (comp.fields && comp.fields.has(fld)) { bd.분야매칭 = 25; reasons.push('입찰 분야 정확히 일치'); }
-      else if (comp.count > 0)                  { bd.분야매칭 = 10; reasons.push('유사 분야 낙찰 이력'); }
+      // ② 매칭 신뢰도 (30)
+      bd.매칭신뢰도 = sc.matchPt;
+      reasons.push(sc.matchLbl);
 
-      // ③ 마감 시급성 (20점)
-      if      (clDay >= 0 && clDay <= 3)  { bd.시급성 = 20; reasons.push('마감 D-' + clDay + ' — 즉시 접근'); }
-      else if (clDay >= 0 && clDay <= 7)  { bd.시급성 = 15; reasons.push('마감 D-' + clDay); }
-      else if (clDay >= 0 && clDay <= 14) { bd.시급성 = 10; reasons.push('마감 D-' + clDay); }
-      else if (clDay >= 0)                { bd.시급성 = 5; }
+      // ③ 골든타임 (20) — 역U자 + 당일발급 강점 반영
+      if      (clDay >= 8  && clDay <= 21) { bd.골든타임 = 20; reasons.push('마감 D-' + clDay + ' — 입찰서류 준비 골든타임'); }
+      else if (clDay >= 4  && clDay <= 7)  { bd.골든타임 = 16; reasons.push('마감 D-' + clDay + ' — 당일발급 어필 적기'); }
+      else if (clDay >= 22 && clDay <= 35) { bd.골든타임 = 10; reasons.push('마감 D-' + clDay + ' — 참여 검토 단계'); }
+      else if (clDay >= 1  && clDay <= 3)  { bd.골든타임 = 6;  reasons.push('마감 임박 — 차기 입찰 대비 접촉'); }
+      else if (clDay >= 36)                { bd.골든타임 = 4; }
 
-      // ④ 낙찰 금액 규모 (15점)
+      // ④ 매출 규모 (15)
       var avgAmt = comp.count > 0 ? comp.totalAmt / comp.count : 0;
-      if      (avgAmt >= 1e8)  { bd.금액규모 = 15; reasons.push('평균 낙찰금액 ' + (avgAmt/1e8).toFixed(1) + '억'); }
-      else if (avgAmt >= 5e7)  { bd.금액규모 = 10; reasons.push('평균 낙찰금액 ' + Math.round(avgAmt/1e4) + '만'); }
-      else if (avgAmt >= 1e7)  { bd.금액규모 = 5; }
+      if      (avgAmt >= 1e8) { bd.매출규모 = 15; reasons.push('평균 낙찰금액 ' + (avgAmt/1e8).toFixed(1) + '억'); }
+      else if (avgAmt >= 5e7) { bd.매출규모 = 10; }
+      else if (avgAmt >= 1e7) { bd.매출규모 = 5; }
 
-      // ⑤ 당사 이용 여부 (10점) — CSV 매칭
+      // ⑤ 당사 이용 여부 (10)
       if (CUSTOMER_SET.size > 0 && comp.bizno && CUSTOMER_SET.has(comp.bizno)) {
         bd.이용여부 = 10; reasons.push('기존 크레디뷰 이용 기업');
       }
 
-      var score = Object.values(bd).reduce(function(s,v){return s+v;},0);
+      var score = bd.낙찰이력 + bd.매칭신뢰도 + bd.골든타임 + bd.매출규모 + bd.이용여부;
       var grade = score >= 70 ? 'A' : score >= 50 ? 'B' : 'C';
-      var tc2   = (grade==='A' || clDay<=3) ? 'timing-urgent' : (grade==='B' || clDay<=7) ? 'timing-soon' : 'timing-normal';
+      var tc2   = (clDay >= 4 && clDay <= 21) ? 'timing-urgent' : (clDay >= 1 && clDay <= 35) ? 'timing-soon' : 'timing-normal';
 
       resultItems.push({
         id:       (comp.bizno || comp.nm) + '_' + (bid.bidNtceNo || Math.random().toString(36).slice(2,6)),
-        name:     comp.nm || bid.ntceInsttNm || '—',
+        name:     comp.nm,
         bizno:    comp.bizno,
-        org:      bid.ntceInsttNm || bid.dminsttNm || '—',
+        org:      bidOrg || '—',
         bidNm:    bid.bidNtceNm || '(공고명없음)',
         bidNtceNo:bid.bidNtceNo || '',
         field:    {1:'공사',2:'용역',3:'물품'}[fld] || fld || '기타',
-        score:    Math.min(score, 100),
+        score:    score,
         grade:    grade,
-        amount:   Math.round(comp.totalAmt / Math.max(1, comp.count)),
+        amount:   Math.round(avgAmt),
         totalAmt: comp.totalAmt,
         bidCount: comp.count,
         method:   bid.bidMthdNm || '',
         regDt:    comp.lastDate || bid.bidNtceDt || '',
-        closeDt:  bid.bidClseDate || '',
+        closeDt:  clDt,
         closeDay: clDay,
         timingClass: tc2,
-        timing:   tc2==='timing-urgent' ? '마감 D-'+Math.max(0,clDay) : tc2==='timing-soon' ? '이번 주 내' : '2주 이내',
-        type:     comp.count >= 3 ? '집중관리형' : grade==='A' ? '전환형' : '신규발굴형',
+        timing:   clDay >= 4 && clDay <= 21 ? '마감 D-' + clDay + ' 골든타임' : clDay >= 1 ? '마감 D-' + clDay : '상시',
+        type:     comp.count >= 3 ? '집중관리형' : sc.matchPt >= 20 ? '전환형' : '신규발굴형',
         status:   '연락전',
         reasons:  reasons,
         breakdown:bd,
         isDup:    false,
-        isLive:   clDay >= 0 && clDay <= 30,
+        isLive:   clDay >= 0 && clDay <= 35,
         closeDiff:clDay
       });
     });
   });
 
-  // 낙찰이력은 있지만 입찰공고 매칭 안 된 상위 업체도 추가
+  // ─ 입찰공고 매칭이 하나도 안 된 경우: 반복 낙찰업체 폴백 (분야만 일치도 포함)
   if (resultItems.length < 10) {
     Object.values(compMap)
       .filter(function(m){ return m.count >= 2; })
@@ -1351,23 +1392,29 @@ async function fetchLeads() {
       .forEach(function(comp) {
         var already = resultItems.some(function(r){ return r.bizno && r.bizno === comp.bizno; });
         if (already) return;
-        var score = Math.min(comp.count * 8 + (comp.totalAmt >= 1e8 ? 15 : comp.totalAmt >= 5e7 ? 10 : 5), 85);
+        var bd = {
+          낙찰이력: comp.count >= 5 ? 25 : comp.count >= 3 ? 19 : 13,
+          매칭신뢰도: 0, 골든타임: 0,
+          매출규모: (comp.totalAmt/Math.max(1,comp.count)) >= 1e8 ? 15 : (comp.totalAmt/Math.max(1,comp.count)) >= 5e7 ? 10 : 5,
+          이용여부: (CUSTOMER_SET.size > 0 && comp.bizno && CUSTOMER_SET.has(comp.bizno)) ? 10 : 0
+        };
+        var score = bd.낙찰이력 + bd.매칭신뢰도 + bd.골든타임 + bd.매출규모 + bd.이용여부;
         var grade = score >= 70 ? 'A' : score >= 50 ? 'B' : 'C';
         resultItems.push({
           id: comp.bizno || comp.nm,
           name: comp.nm, bizno: comp.bizno,
-          org:'—', bidNm:'(반복 낙찰 업체)',
+          org:'—', bidNm:'(현재 매칭 공고 없음 — 반복 낙찰 업체)',
           field: Array.from(comp.fields||[]).map(function(f){return {1:'공사',2:'용역',3:'물품'}[f]||f;}).join('/') || '기타',
           score: score, grade: grade,
           amount: Math.round(comp.totalAmt / Math.max(1,comp.count)),
           totalAmt: comp.totalAmt, bidCount: comp.count,
-          method:'', regDt: comp.lastDate, closeDt:'', closeDay: 999,
-          timingClass: grade==='A'?'timing-urgent':grade==='B'?'timing-soon':'timing-normal',
-          timing: grade==='A'?'3영업일 이내':'이번 주 내',
+          method:'', regDt: comp.lastDate, closeDt:'', closeDay: null,
+          timingClass: 'timing-normal',
+          timing: '상시 접촉 대상',
           type: comp.count>=3?'집중관리형':'전환형',
           status:'연락전',
-          reasons: ['최근 1년 '+comp.count+'회 낙찰','크레디뷰 신용평가 필요성 높음'],
-          breakdown:{낙찰빈도:Math.min(comp.count*8,30),분야매칭:0,시급성:0,금액규모:Math.min(score-Math.min(comp.count*8,30),15),이용여부:0},
+          reasons: ['최근 1년 '+comp.count+'회 낙찰','현재 진행 공고와 직접 매칭은 없음 — 상시 수요 후보'],
+          breakdown: bd,
           isDup:false, isLive:false, closeDiff:null
         });
       });
@@ -1782,7 +1829,7 @@ async function saveMemo(docId){var m=document.getElementById('memo-area').value;
 
 function buildSBD(l){
   var bd=l.breakdown||{};
-  var its=[{lbl:'① 낙찰 빈도 (최근 1년)',v:bd.낙찰빈도||0,m:30},{lbl:'② 분야 매칭 (공고↔낙찰이력)',v:bd.분야매칭||0,m:25},{lbl:'③ 마감 시급성',v:bd.시급성||0,m:20},{lbl:'④ 낙찰 금액 규모',v:bd.금액규모||0,m:15},{lbl:'⑤ 당사 이용 여부',v:bd.이용여부||0,m:10}];
+  var its=[{lbl:'① 낙찰 이력 강도 (최근 1년)',v:bd.낙찰이력||bd.낙찰빈도||0,m:25},{lbl:'② 매칭 신뢰도 (기관·공고명·분야)',v:bd.매칭신뢰도||bd.분야매칭||0,m:30},{lbl:'③ 골든타임 (마감일 역산)',v:bd.골든타임||bd.시급성||0,m:20},{lbl:'④ 매출 규모 (평균 낙찰액)',v:bd.매출규모||bd.금액규모||0,m:15},{lbl:'⑤ 당사 이용 여부',v:bd.이용여부||0,m:10}];
   return its.map(function(it){return '<div class="score-item"><span class="s-label">'+it.lbl+'</span><div class="s-bar"><div class="s-fill" style="width:'+(it.v/it.m*100)+'%"></div></div><span class="s-val">'+it.v+'/'+it.m+'</span></div>';}).join('');
 }
 function bScript(l){return '안녕하세요, 기업신용평가 전문기관 [회사명]입니다.\n'+(l.org||'담당자')+'님, 공공입찰 담당자분과 연결 가능할까요?\n\n최근 '+(l.field||'공공')+' 분야 입찰 참여를 확인하여 연락드렸습니다.\n나라장터 입찰 시 기업신용평가를 당일 발급해 드리며 조달청에 즉시 제출 가능합니다.\n현재 기업신용평가 보유 여부를 여쭤봐도 될까요?';}
