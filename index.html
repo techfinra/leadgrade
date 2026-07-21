@@ -1159,15 +1159,16 @@ async function fetchLeads() {
 
   var bidItems = [];
   await Promise.all(bidEps.map(async function(ep) {
-    var its = await naraFetch('BidPublicInfoService', ep, makeBidQs(1));
-    its = its.filter(function(b) {
-      // 마감일이 오늘 이후인 것만
+    var raw = await naraFetch('BidPublicInfoService', ep, makeBidQs(1));
+    var its = raw.filter(function(b) {
+      // 마감일이 오늘 이후인 것만 — 날짜를 YYYYMMDD(하이픈 없음)로 통일해서 비교
       var cl = b.bidClseDate || b.bidNtceDt || '';
       if (!cl) return true; // 날짜 없으면 포함
-      var dt = cl.length >= 8 ? cl.slice(0,10).replace(/\./g,'-') : '';
-      return !dt || dt >= today;
+      var dt = cl.slice(0,10).replace(/-/g,'').replace(/\./g,'');
+      return dt.length < 8 || dt >= today;
     });
-    log('[입찰공고/' + ep.replace('getBidPblancListInfo','') + '] ' + its.length + '건');
+    var nm = ep.replace('getBidPblancListInfo','');
+    log('[입찰공고/' + nm + '] 수신 ' + raw.length + '건 → 마감미경과 ' + its.length + '건');
     bidItems = bidItems.concat(its);
   }));
   log('📋 입찰공고 총 ' + bidItems.length + '건 (마감 미경과)');
@@ -1274,7 +1275,7 @@ async function fetchLeads() {
       var days = comp.lastDate ? Math.floor((Date.now() - new Date(comp.lastDate.slice(0,10)).getTime()) / 86400000) : 365;
       // 마감 D-day
       var clDt  = bid.bidClseDate || bid.opengDt || '';
-      var clDay = clDt ? Math.ceil((new Date(clDt.slice(0,10).replace(/\./g,'-')).getTime() - Date.now()) / 86400000) : 30;
+      var clDay = clDt ? Math.ceil((new Date(clDt.slice(0,10).replace(/\./g,'-').replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3')).getTime() - Date.now()) / 86400000) : 30;
 
       // 점수 산정
       var bd = { 낙찰빈도:0, 분야매칭:0, 시급성:0, 금액규모:0, 이용여부:0 };
@@ -1366,7 +1367,7 @@ async function fetchLeads() {
           type: comp.count>=3?'집중관리형':'전환형',
           status:'연락전',
           reasons: ['최근 1년 '+comp.count+'회 낙찰','크레디뷰 신용평가 필요성 높음'],
-          breakdown:{낙찰빈도:comp.count*8,분야매칭:0,시급성:0,금액규모:0,이용여부:0},
+          breakdown:{낙찰빈도:Math.min(comp.count*8,30),분야매칭:0,시급성:0,금액규모:Math.min(score-Math.min(comp.count*8,30),15),이용여부:0},
           isDup:false, isLive:false, closeDiff:null
         });
       });
