@@ -367,8 +367,8 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 
 <!-- 오늘의 영업 -->
 <div class="page" id="page-today">
-  <div class="sec">🎯 오늘의 TOP 추천 영업</div>
-  <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">AI Daily Brief</span><div id="today-brief">분석 중...</div></div>
+  <div class="sec">🎯 오늘의 영업 리스트</div>
+  <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">🤖 AI 추천</span><div id="today-brief">분석 중...</div><div style="font-size:10px;color:var(--text3);margin-top:6px">AI가 추천한 오늘의 우선 영업 고객 리스트 — 검색 시 자동 갱신</div></div>
   <div class="top3-grid" id="top3-grid"><div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner"></div></div></div>
   <div class="sec" style="margin-top:8px">팔로업 필요 <span style="font-size:10px;color:var(--danger);text-transform:none;letter-spacing:0;font-weight:700">(3일 이상 미연락)</span></div>
   <div class="tbl-wrap"><table>
@@ -1135,6 +1135,30 @@ async function saveLead(i){
   } catch(e){showToast('❌ '+e.message);}
 }
 
+// ═══ 검색 후 자동 저장 (A등급 전체 + 상위 B로 최소 5개) ═══
+async function autoSaveTop(){
+  var pool = searchLeads.filter(function(l){ return !l.isDup; });
+  var picks = pool.filter(function(l){ return l.grade === 'A'; });
+  if (picks.length < 5) {
+    var bList = pool.filter(function(l){ return l.grade === 'B'; })
+      .sort(function(x,y){ return y.score - x.score; });
+    picks = picks.concat(bList.slice(0, 5 - picks.length));
+  }
+  var savedIds = {};
+  savedLeads.forEach(function(s){ savedIds[s.id] = true; });
+  picks = picks.filter(function(l){ return !savedIds[l.id]; });
+  if (!picks.length) return 0;
+  var saved = 0;
+  for (var i = 0; i < picks.length; i++) {
+    var l = Object.assign({}, picks[i]); delete l.raw;
+    try {
+      await db.collection('leads').add(Object.assign({}, l, {status:'연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()}));
+      saved++;
+    } catch(e) {}
+  }
+  return saved;
+}
+
 async function saveAllA(){
   var aList=searchLeads.filter(function(l){return l.grade==='A'&&!l.isDup;});
   if(!aList.length){showToast('저장할 A등급이 없습니다');return;}
@@ -1439,6 +1463,19 @@ function finishFetch(btn) {
   log('✅ 완료 | 업체 ' + searchLeads.length + '개사 | A:' + aCount + ' B:' + bCount + ' C:' + cCount + ' | 중복:' + dupCount);
   document.getElementById('lead-badge').textContent = searchLeads.length;
   if (aCount > 0) document.getElementById('save-all-btn').style.display = '';
+  // ─ 자동 DB 저장 → 오늘의 영업 TOP3 반영
+  autoSaveTop().then(function(n){
+    if (n > 0) {
+      log('💾 자동 저장 ' + n + '건 → 🎯 오늘의 영업에서 TOP 추천 확인!');
+      showToast('💾 상위 ' + n + '개사 자동 저장 완료');
+      fbGet().then(function(all){
+        savedLeads = all; _allLeads = all;
+        markDups();
+        var aL = all.filter(function(l){ return l.grade === 'A'; }).length;
+        document.getElementById('today-badge').textContent = Math.min(3, aL);
+      });
+    }
+  });
   renderSearch(searchLeads);
   document.getElementById('result-label').textContent =
     searchLeads.length + '개사 분석 | A등급 ' + aCount + '개사 | 중복 ' + dupCount + '건';
