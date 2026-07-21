@@ -1371,6 +1371,8 @@ async function fetchLeads() {
         regDt:    comp.lastDate || bid.bidNtceDt || '',
         closeDt:  clDt,
         closeDay: clDay,
+        detailUrl: bid.bidNtceNo ? ('https://www.g2b.go.kr:8081/ep/invitation/publish/bidInfoDtl.do?bidno=' + bid.bidNtceNo + '&bidseq=' + (bid.bidNtceOrd||'000')) : '',
+        scsbidSearchUrl: 'https://www.g2b.go.kr/ep/tbid/tbidList.do?taskClCds=5&bidNm=' + encodeURIComponent(comp.nm||''),
         timingClass: tc2,
         timing:   clDay >= 4 && clDay <= 21 ? '마감 D-' + clDay + ' 골든타임' : clDay >= 1 ? '마감 D-' + clDay : '상시',
         type:     comp.count >= 3 ? '집중관리형' : sc.matchPt >= 20 ? '전환형' : '신규발굴형',
@@ -1411,6 +1413,8 @@ async function fetchLeads() {
           amount: Math.round(comp.totalAmt / Math.max(1,comp.count)),
           totalAmt: comp.totalAmt, bidCount: comp.count,
           method:'', regDt: comp.lastDate, closeDt:'', closeDay: null,
+          detailUrl: '',
+          scsbidSearchUrl: 'https://www.g2b.go.kr/ep/tbid/tbidList.do?taskClCds=5&bidNm=' + encodeURIComponent(comp.nm||''),
           timingClass: 'timing-normal',
           timing: '상시 접촉 대상',
           type: comp.count>=3?'집중관리형':'전환형',
@@ -1714,9 +1718,13 @@ function appendSearchRows(n) {
     tr.style.opacity = l.isDup ? '.6' : '1';
     tr.setAttribute('data-i', i);
     tr.onclick = function(){ openPanelSearch(parseInt(this.getAttribute('data-i'))); };
+    var linkRow = '';
+    if (l.detailUrl) linkRow += '<a href="'+l.detailUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:9px;color:var(--blue);margin-right:8px;text-decoration:none">📋 공고 ↗</a>';
+    if (l.scsbidSearchUrl) linkRow += '<a href="'+l.scsbidSearchUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:9px;color:var(--gold);text-decoration:none">🏆 낙찰이력 ↗</a>';
     var nameCell = '<div style="font-weight:800;font-size:13px;color:var(--blue);margin-bottom:2px">' + escH(l.compNm || l.name) + '</div>' +
       '<div style="font-size:11px;color:var(--text2);margin-bottom:1px">' + escH(l.name.slice(0,36)) + '</div>' +
-      '<div style="font-size:10px;color:var(--text3)">🏢 ' + escH(l.org) + (l.bizno ? ' · ' + l.bizno : '') + (l.bidCount > 1 ? ' · 낙찰 ' + l.bidCount + '건' : '') + '</div>';
+      '<div style="font-size:10px;color:var(--text3);margin-bottom:2px">🏢 ' + escH(l.org) + (l.bizno ? ' · ' + l.bizno : '') + (l.bidCount > 1 ? ' · 낙찰 ' + l.bidCount + '건' : '') + '</div>' +
+      (linkRow ? '<div>' + linkRow + '</div>' : '');
     tr.innerHTML =
       '<td>' + gradeCol(l.grade, l.score) + '</td>' +
       '<td>' + nameCell + '</td>' +
@@ -1801,7 +1809,12 @@ function openPanel(l,src,i){
   html+='<div class="ds"><span class="ds-k">배정예산액</span><span class="ds-v" style="color:var(--text);font-size:14px;font-weight:900">'+fa(l.amount)+'</span></div>';
   html+='<div class="ds"><span class="ds-k">공고등록일</span><span class="ds-v">'+fdt(l.regDt)+'</span></div>';
   html+='<div class="ds"><span class="ds-k">입찰마감/개찰</span><span class="ds-v">'+fdt(l.closeDt)+'</span></div>';
-  if(l.detailUrl) html+='<div class="ds"><span class="ds-k">공고 상세</span><span class="ds-v"><a href="'+l.detailUrl+'" target="_blank" style="color:var(--blue);font-size:12px">나라장터 ↗</a></span></div>';
+  if(l.detailUrl || l.scsbidSearchUrl){
+    html+='<div style="display:flex;gap:8px;margin:10px 0">';
+    if(l.detailUrl) html+='<a href="'+l.detailUrl+'" target="_blank" class="btn btn-sec btn-sm" style="flex:1;text-align:center;text-decoration:none">📋 입찰공고 원문 ↗</a>';
+    if(l.scsbidSearchUrl) html+='<a href="'+l.scsbidSearchUrl+'" target="_blank" class="btn btn-sec btn-sm" style="flex:1;text-align:center;text-decoration:none">🏆 낙찰이력 검색 ↗</a>';
+    html+='</div>';
+  }
   html+='<div class="sec-h">선정 근거</div>';
   if(l.reasons&&l.reasons.length){l.reasons.forEach(function(r){html+='<div class="pt"><div class="pd"></div><span>'+r+'</span></div>';});}
   else html+='<div style="font-size:12px;color:var(--text3)">기본 조달 활동 확인</div>';
