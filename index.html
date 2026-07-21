@@ -482,243 +482,105 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
         <b style="color:var(--blue)">A등급(70점+)</b>이 오늘 즉시 연락해야 할 최우선 기업입니다.
       </p>
 
-      <!-- ① 공고 활성도 -->
+      <!-- ① 낙찰 빈도 -->
       <div style="margin-bottom:22px;padding:18px;background:var(--surface2);border-radius:var(--radius-lg);border:1.5px solid var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;flex-shrink:0">①</div>
             <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">공고 활성도</div>
-              <div style="font-size:11px;color:var(--text3)">재공고 여부 + 입찰마감 임박도</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">낙찰 빈도</div>
+              <div style="font-size:11px;color:var(--text3)">최근 1년 낙찰 횟수 — 반복 참가업체 우대</div>
             </div>
           </div>
-          <div style="text-align:right">
-            <span style="font-size:22px;font-weight:900;color:var(--blue);font-family:'Inter',sans-serif">15</span>
-            <span style="font-size:11px;color:var(--text3)">점</span>
-          </div>
+          <div style="text-align:right"><span style="font-size:22px;font-weight:900;color:var(--blue)">30</span><span style="font-size:11px;color:var(--text3)">점</span></div>
         </div>
         <div style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:12px">
-          공고가 <b>재공고</b>이거나 <b>입찰마감이 임박</b>할수록 점수가 높아집니다.
+          최근 1년간 같은 업체가 <b>여러 번 낙찰</b>됐다면 나라장터 입찰에 정기적으로 참가하는 기업입니다. 조달 활동이 활발할수록 신용평가 수요도 반복됩니다.
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px">재공고 (유찰 후)</div>
-            <div style="font-size:13px;font-weight:800;color:var(--blue)">+5점</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">발주기관이 급하게 기업을 찾는 상황</div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px">입찰마감 임박도</div>
-            <div style="font-size:13px;font-weight:800;color:var(--blue)">+2 ~ +10점</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">마감 3일 전 +10 / 7일 +7 / 이후 +4</div>
-          </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">5회 이상</div><div style="font-size:16px;font-weight:900">30점</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">3~4회</div><div style="font-size:16px;font-weight:900">22점</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">2회</div><div style="font-size:16px;font-weight:900">15점</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">1회</div><div style="font-size:16px;font-weight:900">8점</div></div>
         </div>
       </div>
 
-      <!-- ② 수요 시급성 -->
+      <!-- ② 분야 매칭 -->
       <div style="margin-bottom:22px;padding:18px;background:var(--surface2);border-radius:var(--radius-lg);border:1.5px solid var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c0392b,var(--danger));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;flex-shrink:0">②</div>
             <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">수요 시급성</div>
-              <div style="font-size:11px;color:var(--text3)">입찰 진행 중 공고 최우대 — 골든타임 감지</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">분야 매칭</div>
+              <div style="font-size:11px;color:var(--text3)">현재 입찰공고 분야 ↔ 과거 낙찰이력 분야 일치 여부</div>
             </div>
           </div>
-          <div style="text-align:right">
-            <span style="font-size:22px;font-weight:900;color:var(--danger);font-family:'Inter',sans-serif">20</span>
-            <span style="font-size:11px;color:var(--text3)">점</span>
-          </div>
+          <div style="text-align:right"><span style="font-size:22px;font-weight:900;color:var(--danger)">25</span><span style="font-size:11px;color:var(--text3)">점</span></div>
         </div>
         <div style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:12px">
-          입찰마감일이 <b>아직 지나지 않은 공고</b> = 지금 이 순간 입찰을 준비하는 기업들이 신용평가서를 발급받아야 하는 <b style="color:var(--danger)">골든타임</b>입니다.
+          현재 진행 중인 입찰공고와 <b>같은 분야(공사·용역·물품)</b>에서 낙찰 이력이 있는 업체는 이번 공고에도 참가·낙찰될 가능성이 높습니다.
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <tr style="background:var(--surface);border-radius:var(--radius)">
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">상황</th>
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">점수</th>
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">의미</th>
-          </tr>
-          <tr><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;color:var(--danger)">입찰마감 D-3 이내</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:900;color:var(--danger)">20점</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text3)">지금 당장 신용평가 필요 — 즉시 연락</td></tr>
-          <tr><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;color:var(--warn)">입찰마감 D-7 이내</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:900;color:var(--warn)">16점</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text3)">이번 주 내 연락</td></tr>
-          <tr><td style="padding:8px 10px;border-bottom:1px solid var(--border)">입찰마감 D-14 이내</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:900">12점</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text3)">2주 내 연락 권장</td></tr>
-          <tr><td style="padding:8px 10px;border-bottom:1px solid var(--border)">입찰마감 이후 (최근 7일)</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:900">6점</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text3)">차기 입찰 대비 시점</td></tr>
-          <tr><td style="padding:8px 10px">30일 이상 지난 공고</td><td style="padding:8px 10px;font-weight:900">2점</td><td style="padding:8px 10px;color:var(--text3)">우선순위 낮음</td></tr>
-        </table>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px"><div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:4px">분야 정확히 일치</div><div style="font-size:16px;font-weight:900">25점</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px"><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px">유사 분야 이력만 있음</div><div style="font-size:16px;font-weight:900">10점</div></div>
+        </div>
       </div>
 
-      <!-- ③ 매출 가능성 -->
+      <!-- ③ 마감 시급성 -->
       <div style="margin-bottom:22px;padding:18px;background:var(--surface2);border-radius:var(--radius-lg);border:1.5px solid var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#c8930a,var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;flex-shrink:0">③</div>
             <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">매출 가능성</div>
-              <div style="font-size:11px;color:var(--text3)">공고 배정예산액(계약규모) 기준</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">마감 시급성</div>
+              <div style="font-size:11px;color:var(--text3)">입찰공고 마감일까지 남은 기간</div>
             </div>
           </div>
-          <div style="text-align:right">
-            <span style="font-size:22px;font-weight:900;color:var(--gold);font-family:'Inter',sans-serif">20</span>
-            <span style="font-size:11px;color:var(--text3)">점</span>
-          </div>
+          <div style="text-align:right"><span style="font-size:22px;font-weight:900;color:var(--gold)">20</span><span style="font-size:11px;color:var(--text3)">점</span></div>
         </div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:10px">
-          공고의 <b>배정예산액</b>이 클수록 해당 기업의 사업 규모가 크고, 기업신용평가 수수료를 지불할 능력이 있다고 판단합니다.
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center">
-            <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:4px">5억 이상</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">20점</div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center">
-            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">1억 이상</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">16점</div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px">5천만 이상</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">11점</div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px">1천만 이상</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">6점</div>
-          </div>
-        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <tr><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;color:var(--danger)">마감 D-3 이내</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:900">20점</td></tr>
+          <tr><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;color:var(--warn)">마감 D-7 이내</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:900">15점</td></tr>
+          <tr><td style="padding:8px 10px;border-bottom:1px solid var(--border)">마감 D-14 이내</td><td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:900">10점</td></tr>
+          <tr><td style="padding:8px 10px">그 이후</td><td style="padding:8px 10px;font-weight:900">5점</td></tr>
+        </table>
       </div>
 
-      <!-- ④ 당사 이용 여부 -->
+      <!-- ④ 낙찰 금액 규모 -->
       <div style="margin-bottom:22px;padding:18px;background:var(--surface2);border-radius:var(--radius-lg);border:1.5px solid var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0a6634,var(--success));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;flex-shrink:0">④</div>
             <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">당사 이용 여부</div>
-              <div style="font-size:11px;color:var(--text3)">내부 고객 CSV 업로드 시 정교화</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">낙찰 금액 규모</div>
+              <div style="font-size:11px;color:var(--text3)">평균 낙찰금액(총 낙찰금액 ÷ 낙찰횟수)</div>
             </div>
           </div>
-          <div style="text-align:right">
-            <span style="font-size:22px;font-weight:900;color:var(--success);font-family:'Inter',sans-serif">10</span>
-            <span style="font-size:11px;color:var(--text3)">점</span>
-          </div>
+          <div style="text-align:right"><span style="font-size:22px;font-weight:900;color:var(--success)">15</span><span style="font-size:11px;color:var(--text3)">점</span></div>
         </div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:12px">
-          설정 탭에서 <b>기존 고객 CSV를 업로드</b>하면 발주기관(발주처)과 내부 고객 DB를 매칭해 유형을 자동 분류합니다.
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <div style="background:rgba(10,122,68,.08);border:1px solid rgba(10,122,68,.2);border-radius:var(--radius);padding:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--success);margin-bottom:3px">등급 만료 임박</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">10점</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:3px">갱신형 — 재계약 가장 쉬움</div>
-          </div>
-          <div style="background:rgba(26,111,232,.08);border:1px solid rgba(26,111,232,.2);border-radius:var(--radius);padding:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:3px">미이용 신규기업</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">7점</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:3px">신규발굴형 — CSV 없을 때 기본값</div>
-          </div>
-          <div style="background:rgba(179,92,0,.08);border:1px solid rgba(179,92,0,.2);border-radius:var(--radius);padding:12px">
-            <div style="font-size:11px;font-weight:700;color:var(--warn);margin-bottom:3px">기존 이용중</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">4점</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:3px">이미 고객 — 영업 우선도 낮음</div>
-          </div>
-        </div>
-        <div style="margin-top:10px;padding:10px 12px;background:rgba(200,136,10,.08);border:1px solid rgba(200,136,10,.2);border-radius:var(--radius);font-size:12px;color:var(--text2)">
-          💡 <b>CSV 형식:</b> 사업자번호, 기업명, 등급보유여부(Y/N), 만료일 — 설정 탭에서 업로드
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">평균 1억 이상</div><div style="font-size:16px;font-weight:900">15점</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">5천만 이상</div><div style="font-size:16px;font-weight:900">10점</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">1천만 이상</div><div style="font-size:16px;font-weight:900">5점</div></div>
         </div>
       </div>
 
-      <!-- ⑤ 평가 필요성 -->
+      <!-- ⑤ 당사 이용 여부 -->
       <div style="margin-bottom:22px;padding:18px;background:var(--surface2);border-radius:var(--radius-lg);border:1.5px solid var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6B3FCC,var(--purple));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;flex-shrink:0">⑤</div>
             <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">평가 필요성</div>
-              <div style="font-size:11px;color:var(--text3)">낙찰방법 필드 직접 판별 — 가장 중요한 항목</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">당사 이용 여부</div>
+              <div style="font-size:11px;color:var(--text3)">설정 탭 CSV 업로드 시 사업자번호로 매칭</div>
             </div>
           </div>
-          <div style="text-align:right">
-            <span style="font-size:22px;font-weight:900;color:var(--purple);font-family:'Inter',sans-serif">25</span>
-            <span style="font-size:11px;color:var(--text3)">점</span>
-          </div>
+          <div style="text-align:right"><span style="font-size:22px;font-weight:900;color:var(--purple)">10</span><span style="font-size:11px;color:var(--text3)">점</span></div>
         </div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:12px">
-          나라장터 API의 <b>낙찰방법(sucsfbidMthdNm)</b> 필드를 직접 읽어 신용평가가 필요한지 판별합니다.<br>
-          공고명 텍스트 검색보다 훨씬 정확합니다.
+        <div style="font-size:13px;color:var(--text2);line-height:1.9">
+          설정 탭에서 기존 크레디뷰 이용 고객 CSV를 업로드하면 사업자번호가 일치하는 업체에 <b>+10점</b>이 자동 반영됩니다.
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <tr style="background:var(--surface)">
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">낙찰방법 / 조건</th>
-            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">점수</th>
-            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)">이유</th>
-          </tr>
-          <tr style="background:rgba(107,63,204,.04)">
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:700;color:var(--purple)">낙찰방법: <b>적격심사</b></td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:900;color:var(--purple);text-align:center">25점</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text3)">낙찰 조건에 신용평가 <b>필수</b> — 확실한 수요</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:600">공고명에 적격심사·신용평가 명시</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:900;text-align:center">20점</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text3)">공고 내용에 신용평가 조건 포함</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border)">낙찰방법: 협상에의한계약</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:900;text-align:center">18점</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text3)">제안평가에 신용도·재무건전성 포함되는 경우 많음</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border)">계약방법: 제한·지명경쟁</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:900;text-align:center">15점</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text3)">자격요건 심사 과정에서 신용평가 요구</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border)">공사 분야 (적격심사 비율 높음)</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:900;text-align:center">12점</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text3)">공사는 적격심사 낙찰 비율 타 분야 대비 높음</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border)">용역 분야</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:900;text-align:center">8점</td>
-            <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text3)">일반 용역 — 조건 따라 다름</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 10px">물품 / 기타</td>
-            <td style="padding:9px 10px;font-weight:900;text-align:center">4점</td>
-            <td style="padding:9px 10px;color:var(--text3)">신용평가 필요성 낮은 분야</td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- ⑥ 영업 반응도 -->
-      <div style="margin-bottom:22px;padding:18px;background:var(--surface2);border-radius:var(--radius-lg);border:1.5px solid var(--border)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#555,#888);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;flex-shrink:0">⑥</div>
-            <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">영업 반응도</div>
-              <div style="font-size:11px;color:var(--text3)">과거 상담·TM 반응 이력 (CSV 연동 시 활성화)</div>
-            </div>
-          </div>
-          <div style="text-align:right">
-            <span style="font-size:22px;font-weight:900;color:var(--text3);font-family:'Inter',sans-serif">10</span>
-            <span style="font-size:11px;color:var(--text3)">점</span>
-          </div>
-        </div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:10px">
-          과거에 상담하거나 TM에 반응했던 기업일수록 다시 전환될 가능성이 높습니다.<br>
-          내부 CSV에 <b>contacted: Y</b> 컬럼을 추가하면 자동 반영됩니다.
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:3px">과거 상담·TM 반응 있음</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">8점</div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:3px">이력 없음 (기본값)</div>
-            <div style="font-size:18px;font-weight:900;color:var(--text)">5점</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 등급 기준 -->
+      </div>      <!-- 등급 기준 -->
       <div style="padding:18px;background:var(--surface2);border-radius:var(--radius-lg);border:1.5px solid var(--border)">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">🎯 등급 기준 및 연락 권장 시점</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
@@ -1919,7 +1781,7 @@ async function saveMemo(docId){var m=document.getElementById('memo-area').value;
 
 function buildSBD(l){
   var bd=l.breakdown||{};
-  var its=[{lbl:'① 공고 활성도 (재공고·마감임박)',v:bd.활동성||0,m:15},{lbl:'② 수요 시급성 (진행중 우대)',v:bd.시급성||0,m:20},{lbl:'③ 매출 가능성 (계약규모)',v:bd.매출가능성||0,m:20},{lbl:'④ 당사 이용 여부',v:bd.이용여부||0,m:10},{lbl:'⑤ 평가 필요성 (낙찰방법)',v:bd.평가필요||0,m:25},{lbl:'⑥ 영업 반응도',v:bd.반응도||0,m:10}];
+  var its=[{lbl:'① 낙찰 빈도 (최근 1년)',v:bd.낙찰빈도||0,m:30},{lbl:'② 분야 매칭 (공고↔낙찰이력)',v:bd.분야매칭||0,m:25},{lbl:'③ 마감 시급성',v:bd.시급성||0,m:20},{lbl:'④ 낙찰 금액 규모',v:bd.금액규모||0,m:15},{lbl:'⑤ 당사 이용 여부',v:bd.이용여부||0,m:10}];
   return its.map(function(it){return '<div class="score-item"><span class="s-label">'+it.lbl+'</span><div class="s-bar"><div class="s-fill" style="width:'+(it.v/it.m*100)+'%"></div></div><span class="s-val">'+it.v+'/'+it.m+'</span></div>';}).join('');
 }
 function bScript(l){return '안녕하세요, 기업신용평가 전문기관 [회사명]입니다.\n'+(l.org||'담당자')+'님, 공공입찰 담당자분과 연결 가능할까요?\n\n최근 '+(l.field||'공공')+' 분야 입찰 참여를 확인하여 연락드렸습니다.\n나라장터 입찰 시 기업신용평가를 당일 발급해 드리며 조달청에 즉시 제출 가능합니다.\n현재 기업신용평가 보유 여부를 여쭤봐도 될까요?';}
