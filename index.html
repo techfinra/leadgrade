@@ -1284,7 +1284,7 @@ async function fetchLeads() {
     return 'ServiceKey=' + API_KEY +
       '&pageNo=' + pg + '&numOfRows=' + API_MAX + '&type=json' +
       '&inqryDiv=1' +
-      '&inqryBgnDt=' + d90ago + '0000' +
+      '&inqryBgnDt=' + dateStr(-30) + '0000' +
       '&inqryEndDt=' + today  + '2359' +
       (keyword ? '&bidNtceNm=' + encodeURIComponent(keyword) : '');
   }
@@ -1309,13 +1309,11 @@ async function fetchLeads() {
   var scsbidEpMap = { '1':'getScsbidListSttusCnstwk', '2':'getScsbidListSttusServc', '3':'getScsbidListSttusThng' };
   var scsbidEps   = bidType ? [scsbidEpMap[bidType]] : ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng'];
 
-  // 낙찰이력: 90일씩 4분기로 나눠 1년치 수집
-  var quarters = [
-    { bgn: dateStr(-90),  end: today        },
-    { bgn: dateStr(-180), end: dateStr(-91) },
-    { bgn: dateStr(-270), end: dateStr(-181)},
-    { bgn: dateStr(-365), end: dateStr(-271)},
-  ];
+  // 낙찰이력: 30일씩 12개월로 나눠 1년치 수집 (API 최대 30일 제한)
+  var quarters = [];
+  for (var qi2 = 0; qi2 < 12; qi2++) {
+    quarters.push({ bgn: dateStr(-(qi2+1)*30), end: dateStr(-qi2*30 - (qi2===0?0:1)) });
+  }
 
   function makeScsbidQs(pg, bgn, end2) {
     return 'ServiceKey=' + API_KEY +
@@ -1346,7 +1344,7 @@ async function fetchLeads() {
         }
       } catch(e) {}
     }));
-    log('[낙찰 ' + (qi+1) + '/4분기] 누적 ' + scsbidItems.length + '건');
+    log('[낙찰 ' + (qi+1) + '/12개월] 누적 ' + scsbidItems.length + '건');
     if (scsbidItems.length >= perPage * 4) break;
   }
   log('🏅 낙찰이력 총 ' + scsbidItems.length + '건');
