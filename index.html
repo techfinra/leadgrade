@@ -1254,25 +1254,31 @@ async function fetchLeads() {
       });
     var txt = await r.text();
     if (!txt || txt.length < 50) return [];
-    // 에러 응답 체크
-    if (txt.indexOf('ResponseError') >= 0 || txt.indexOf('resultCode') >= 0) {
-      try {
-        var ej = JSON.parse(txt);
-        var eh = (ej['nkoneps.com.response.ResponseError'] || {}).header || {};
-        log('⚠️ API 오류 ['+svc+'/'+ep+']: ' + (eh.resultCode||'?') + ' — ' + (eh.resultMsg||txt.slice(0,80)));
-      } catch(e) { log('⚠️ 에러응답: ' + txt.slice(0,100)); }
-      return [];
-    }
     if (txt.indexOf('_debug') >= 0) { try { var d=JSON.parse(txt); log('⚠️ 서버오류: '+d._status+' path:'+d._path); } catch(e){} return []; }
+
+    // 진짜 ResponseError(대문자 클래스명)인지 체크 — response.header.resultCode 는 정상 응답 구조이므로 별개
+    var isRealError = txt.indexOf('nkoneps.com.response.ResponseError') >= 0;
+
     try {
-      var j    = JSON.parse(txt);
+      var j = JSON.parse(txt);
+
+      if (isRealError) {
+        var eh = (j['nkoneps.com.response.ResponseError'] || {}).header || {};
+        log('⚠️ API 오류 ['+svc+'/'+ep+']: ' + (eh.resultCode||'?') + ' — ' + (eh.resultMsg||txt.slice(0,80)));
+        return [];
+      }
+
       var body = (j.response && j.response.body) || j.body || j;
-      var bi   = body.items;
-      var its  = Array.isArray(bi) ? bi : (bi && bi.item ? (Array.isArray(bi.item) ? bi.item : [bi.item]) : []);
-      // 디버그: 첫 아이템 키 확인
-      if (its.length > 0) log('✅ 파싱성공 ['+ep.slice(-6)+']: ' + its.length + '건, 첫항목키=' + Object.keys(its[0]).slice(0,4).join(','));
+      var hdr  = (j.response && j.response.header) || {};
+      if (hdr.resultCode && hdr.resultCode !== '00') {
+        log('⚠️ API 결과코드 ['+svc+'/'+ep+']: ' + hdr.resultCode + ' — ' + hdr.resultMsg);
+        return [];
+      }
+      var bi  = body.items;
+      var its = Array.isArray(bi) ? bi : (bi && bi.item ? (Array.isArray(bi.item) ? bi.item : [bi.item]) : []);
+      if (its.length > 0) log('✅ ['+ep.slice(-6)+'] ' + its.length + '건 수신');
       return its;
-    } catch(e) { log('❌ 파싱실패: ' + e.message + ' | ' + txt.slice(0,100)); return []; }
+    } catch(e) { log('❌ 파싱실패 ['+svc+'/'+ep+']: ' + e.message + ' | ' + txt.slice(0,120)); return []; }
   }
 
   // ─ STEP 1: 현재 입찰공고 수집 (마감일 > 오늘)
