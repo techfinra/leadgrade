@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>낙찰이력 보유기간 테스트</title></head>
+<body style="font-family:monospace;padding:20px;background:#111;color:#0f0;font-size:13px">
+<h2 style="color:#fff">낙찰이력 API — 과거 데이터 보유기간 테스트</h2>
+<div id="log"></div>
+<script>
+var KEY = '5e28545eb4cc2148cc0a3dc9eb8d273018db18537aa28ed21e7983ed66363aef';
+function log(msg, c) {
+  var d = document.createElement('div');
+  d.style.color = c || '#0f0'; d.style.marginBottom = '4px';
+  d.textContent = msg;
+  document.getElementById('log').appendChild(d);
+}
+function dstr(daysAgo) {
+  var dt = new Date(); dt.setDate(dt.getDate() - daysAgo);
+  return dt.toISOString().slice(0,10).replace(/-/g,'');
+}
+
+// 테스트 구간: 1년전, 3년전, 5년전, 8년전, 10년전, 15년전 각각 30일 구간
+var tests = [
+  { label: '현재(대조군)', daysAgo: 0 },
+  { label: '1년 전', daysAgo: 365 },
+  { label: '3년 전', daysAgo: 365*3 },
+  { label: '5년 전', daysAgo: 365*5 },
+  { label: '8년 전', daysAgo: 365*8 },
+  { label: '10년 전', daysAgo: 365*10 },
+  { label: '15년 전', daysAgo: 365*15 },
+];
+
+async function testRange(t) {
+  var end = dstr(t.daysAgo);
+  var start = dstr(t.daysAgo + 30);
+  var qs = 'ServiceKey=' + KEY + '&pageNo=1&numOfRows=5&type=json&inqryDiv=1'
+    + '&inqryBgnDt=' + start + '0000' + '&inqryEndDt=' + end + '2359';
+  var url = '/api/nara?' + qs + '&_ep=getScsbidListSttusServc&_svc=ScsbidInfoService';
+  log('[' + t.label + '] 조회구간 ' + start + '~' + end + ' 시도...');
+  try {
+    var r = await fetch(url, {signal: AbortSignal.timeout(15000)});
+    var txt = await r.text();
+    if (txt.indexOf('nkoneps.com.response.ResponseError') >= 0) {
+      var ej = JSON.parse(txt);
+      var eh = (ej['nkoneps.com.response.ResponseError']||{}).header||{};
+      log('  ❌ API 오류: ' + eh.resultCode + ' - ' + eh.resultMsg, '#f44');
+      return;
+    }
+    var j = JSON.parse(txt);
+    var body = (j.response && j.response.body) || {};
+    var tc = parseInt(body.totalCount) || 0;
+    var items = body.items;
+    var its = Array.isArray(items) ? items : (items && items.item ? [].concat(items.item) : []);
+    if (tc > 0 || its.length > 0) {
+      log('  ✅ 데이터 있음! 전체 ' + tc + '건, 샘플: ' + (its[0] ? (its[0].bidwinnrNm||its[0].bidNtceNm||'') : ''), '#0f0');
+    } else {
+      log('  ⚠️ 응답은 정상이나 데이터 0건', '#fa0');
+    }
+  } catch(e) {
+    log('  ❌ 오류: ' + e.message, '#f44');
+  }
+}
+
+async function runAll() {
+  for (var t of tests) {
+    await testRange(t);
+  }
+  log('');
+  log('=== 테스트 완료 ===', '#fff');
+}
+runAll();
+</script>
+</body></html>
