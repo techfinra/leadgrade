@@ -339,8 +339,8 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <button class="nav" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
   <button class="nav" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
   <div class="sb-label">System</div>
-  <button class="nav" onclick="showPage(&apos;settings&apos;,this)"><span class="nav-icon">⚙️</span>설정</button>
   <button class="nav" onclick="showPage(&apos;guide&apos;,this)"><span class="nav-icon">📖</span>가이드</button>
+  <button class="nav" onclick="showPage(&apos;settings&apos;,this)"><span class="nav-icon">⚙️</span>설정</button>
   <div class="sb-foot">
     <div id="sb-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--blue);animation:blink 2s infinite"></div><span style="font-size:11px;color:var(--text3);margin-left:7px">연결 확인 중...</span></div>
     <div id="sb-detail" style="font-size:10px;color:var(--text3);line-height:1.9;margin-top:4px"></div>
@@ -423,10 +423,12 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       <option value="custom">직접 입력...</option>
     </select>
     <input type="number" id="date-range" value="30" min="1" max="365" style="width:90px;display:none" title="직접 입력한 일수" placeholder="일수">
-    <button class="btn btn-primary" id="fetch-btn" onclick="fetchLeads()">🚀 수집 시작</button>
+    <button class="btn btn-primary" id="fetch-btn" onclick="fetchLeads()">📋 입찰공고 조회 + 매칭</button>
+    <button class="btn btn-sec" id="scsbid-quick-update-btn" onclick="quickUpdateScsbid()">🏆 낙찰DB 최신화</button>
     <button class="btn btn-gold" id="save-all-btn" onclick="saveAllA()" style="display:none">⚡ A등급 일괄 저장</button>
   </div>
-  <div class="log-box" id="log-box">> 데이터소스를 선택하고 [수집 시작]을 클릭하세요.</div>
+  <div id="scsbid-mini-status" style="font-size:10.5px;color:var(--text3);margin-bottom:8px"></div>
+  <div class="log-box" id="log-box">> [📋 입찰공고 조회 + 매칭]을 눌러 현재 진행 중인 공고와 낙찰이력을 교차분석하세요. 낙찰DB가 오래됐으면 [🏆 낙찰DB 최신화]를 먼저 눌러주세요.</div>
   <div id="collect-summary-card" style="display:none"></div>
   <div class="sec">분석 결과 <span id="result-label" style="font-size:11px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:600"></span></div>
   <div class="tbl-wrap"><table>
@@ -659,6 +661,78 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       <div class="pt"><div class="pd"></div><span>A등급 일괄저장 후 파이프라인 칸반에서 상태 관리하면 팔로업 경고가 자동으로 뜹니다</span></div>
     </div>
 
+    <!-- API 상세 참고자료 -->
+    <div class="sec" style="margin-top:24px">📡 나라장터 API 상세 참고자료</div>
+
+    <div style="background:rgba(26,111,232,.06);border:1.5px solid rgba(26,111,232,.2);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
+      <h3 style="font-size:13px;font-weight:800;color:var(--blue);margin-bottom:4px">📋 입찰공고정보서비스 (BidPublicInfoService)</h3>
+      <p style="font-size:11.5px;color:var(--text3);margin-bottom:10px;line-height:1.7">현재 진행 중인 입찰공고를 실시간으로 조회합니다. 1회 조회 최대 30일 구간 제한.</p>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:rgba(26,111,232,.1)">
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">필드명</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">한글명</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">예시값</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">설명</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">bidNtceNo</td><td style="padding:6px 8px">입찰공고번호</td><td style="padding:6px 8px;font-family:monospace">R25BK00932003</td><td style="padding:6px 8px;color:var(--text2)">공고 고유번호. 년도+월+순번 형식</td></tr>
+          <tr style="background:rgba(26,111,232,.04)"><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">bidNtceNm</td><td style="padding:6px 8px">입찰공고명</td><td style="padding:6px 8px;font-family:monospace">문성고등학교 비탈면공사...</td><td style="padding:6px 8px;color:var(--text2)">공고 요약명 — 공고명 유사도 매칭에 사용</td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">bidClsfcNo</td><td style="padding:6px 8px">분야코드</td><td style="padding:6px 8px;font-family:monospace">1/2/3</td><td style="padding:6px 8px;color:var(--text2)">1=공사, 2=용역, 3=물품</td></tr>
+          <tr style="background:rgba(26,111,232,.04)"><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">ntceInsttNm</td><td style="padding:6px 8px">공고기관명</td><td style="padding:6px 8px;font-family:monospace">광주광역시교육청...</td><td style="padding:6px 8px;color:var(--text2)">공고를 낸(대행) 기관</td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">dminsttNm</td><td style="padding:6px 8px">수요기관명</td><td style="padding:6px 8px;font-family:monospace">인천광역시 종합건설본부</td><td style="padding:6px 8px;color:var(--text2)"><b>실제 수요기관 — 매칭신뢰도 핵심 필드</b></td></tr>
+          <tr style="background:rgba(26,111,232,.04)"><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">bidMethdNm</td><td style="padding:6px 8px">입찰방식명</td><td style="padding:6px 8px;font-family:monospace">전자입찰</td><td style="padding:6px 8px;color:var(--text2)">전자입찰/전자시담/복수견적 등</td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">bidNtceDt</td><td style="padding:6px 8px">입찰공고일시</td><td style="padding:6px 8px;font-family:monospace">2025-07-01 06:23:47</td><td style="padding:6px 8px;color:var(--text2)">공고를 낸 일시</td></tr>
+          <tr style="background:rgba(26,111,232,.04)"><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">bidClseDt</td><td style="padding:6px 8px">입찰마감일시</td><td style="padding:6px 8px;font-family:monospace">2025-07-08 10:00:00</td><td style="padding:6px 8px;color:var(--text2)"><b>골든타임 D-day 계산 기준 필드</b></td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">opengDt</td><td style="padding:6px 8px">개찰일시</td><td style="padding:6px 8px;font-family:monospace">2025-07-08 11:00:00</td><td style="padding:6px 8px;color:var(--text2)">개찰 가능 시작 시점</td></tr>
+          <tr style="background:rgba(26,111,232,.04)"><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">intrbidYn</td><td style="padding:6px 8px">국제입찰여부</td><td style="padding:6px 8px;font-family:monospace">Y/N</td><td style="padding:6px 8px;color:var(--text2)">국제입찰 대상 여부</td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--blue)">reNtceYn</td><td style="padding:6px 8px">재공고여부</td><td style="padding:6px 8px;font-family:monospace">Y/N</td><td style="padding:6px 8px;color:var(--text2)">유찰 후 재공고인지 여부</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="font-size:10px;color:var(--text3);margin-top:8px">엔드포인트: getBidPblancListInfoCnstwk(공사)·Servc(용역)·Thng(물품) · 조회조건: inqryDiv=1(등록일시 기준), inqryBgnDt/inqryEndDt (YYYYMMDDHHMM)</p>
+    </div>
+
+    <div style="background:rgba(200,136,10,.06);border:1.5px solid rgba(200,136,10,.2);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
+      <h3 style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:4px">🏆 낙찰정보서비스 (ScsbidInfoService)</h3>
+      <p style="font-size:11.5px;color:var(--text3);margin-bottom:10px;line-height:1.7">과거 낙찰이력을 조회합니다. 15년 전까지 데이터 확인됨. 마찬가지로 1회 조회 최대 30일 제한 — 그래서 [설정] 탭에서 미리 DB로 구축해둡니다.</p>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:rgba(200,136,10,.12)">
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">필드명</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">한글명</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">예시값</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1.5px solid var(--border)">설명</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">bidwinnrNm</td><td style="padding:6px 8px">최종낙찰업체명</td><td style="padding:6px 8px;font-family:monospace">주식회사 동광보일러</td><td style="padding:6px 8px;color:var(--text2)"><b>업체 식별 핵심 필드</b></td></tr>
+          <tr style="background:rgba(200,136,10,.05)"><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">bidwinnrBizno</td><td style="padding:6px 8px">사업자등록번호</td><td style="padding:6px 8px;font-family:monospace">1408121883</td><td style="padding:6px 8px;color:var(--text2)"><b>중복체크·DB 키(docId)로 사용</b></td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">bidwinnrCeoNm</td><td style="padding:6px 8px">대표자명</td><td style="padding:6px 8px;font-family:monospace">박정연</td><td style="padding:6px 8px;color:var(--text2)">현재 미사용 (향후 활용 가능)</td></tr>
+          <tr style="background:rgba(200,136,10,.05)"><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">bidwinnrAdrs</td><td style="padding:6px 8px">업체주소</td><td style="padding:6px 8px;font-family:monospace">충청남도 아산시 수장로 67-0</td><td style="padding:6px 8px;color:var(--text2)">현재 미사용</td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">bidwinnrTelNo</td><td style="padding:6px 8px">업체전화번호</td><td style="padding:6px 8px;font-family:monospace">02-6258-8989</td><td style="padding:6px 8px;color:var(--text2)">현재 미사용 (연락처로 활용 가능)</td></tr>
+          <tr style="background:rgba(200,136,10,.05)"><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">sucsfbidAmt</td><td style="padding:6px 8px">최종낙찰금액</td><td style="padding:6px 8px;font-family:monospace">83500000</td><td style="padding:6px 8px;color:var(--text2)"><b>매출규모 점수 산정 필드</b></td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">sucsfbidRate</td><td style="padding:6px 8px">최종낙찰률</td><td style="padding:6px 8px;font-family:monospace">97.82(%)</td><td style="padding:6px 8px;color:var(--text2)">예정가격 대비 낙찰률. 현재 미사용</td></tr>
+          <tr style="background:rgba(200,136,10,.05)"><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">dminsttNm</td><td style="padding:6px 8px">수요기관명</td><td style="padding:6px 8px;font-family:monospace">인천광역시 종합건설본부</td><td style="padding:6px 8px;color:var(--text2)"><b>매칭신뢰도 핵심 필드 (입찰공고와 동일 필드로 매칭)</b></td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">bidNtceNm</td><td style="padding:6px 8px">입찰공고명</td><td style="padding:6px 8px;font-family:monospace">혁신육아복합센터 건립공사...</td><td style="padding:6px 8px;color:var(--text2)">공고명 유사도 매칭에 사용</td></tr>
+          <tr style="background:rgba(200,136,10,.05)"><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">rlOpengDt</td><td style="padding:6px 8px">실개찰일시</td><td style="padding:6px 8px;font-family:monospace">2025-07-23 11:00:00</td><td style="padding:6px 8px;color:var(--text2)">실제 개찰이 이뤄진 시점</td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">fnlSucsfDate</td><td style="padding:6px 8px">최종낙찰일자</td><td style="padding:6px 8px;font-family:monospace">2025-07-23</td><td style="padding:6px 8px;color:var(--text2)"><b>낙찰빈도·최근성 판단 기준일</b></td></tr>
+          <tr style="background:rgba(200,136,10,.05)"><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">rgstDt</td><td style="padding:6px 8px">등록일시</td><td style="padding:6px 8px;font-family:monospace">2025-07-23 15:20:05</td><td style="padding:6px 8px;color:var(--text2)">fnlSucsfDate 없을 때 대체 사용</td></tr>
+          <tr><td style="padding:6px 8px;font-family:monospace;color:var(--gold)">prtcptCnum</td><td style="padding:6px 8px">참가업체수</td><td style="padding:6px 8px;font-family:monospace">2</td><td style="padding:6px 8px;color:var(--text2)">현재 미사용 (경쟁강도 참고 가능)</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="font-size:10px;color:var(--text3);margin-top:8px">엔드포인트: getScsbidListSttusCnstwk(공사)·Servc(용역)·Thng(물품) · 조회조건: inqryDiv=1(등록일시 기준) · 확인된 데이터 보유기간: <b>최소 2011년~현재 (15년+)</b></p>
+    </div>
+
+    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px">
+      <h3 style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px">🔗 두 API를 어떻게 교차매칭하나요?</h3>
+      <div style="font-size:12px;color:var(--text2);line-height:2">
+        <b>① 수요기관 일치</b> — 입찰공고의 <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">dminsttNm</code>과 낙찰이력의 <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">dminsttNm</code>이 같으면 그 기관에 낙찰 이력 있는 업체로 판단 (+20점)<br>
+        <b>② 공고명 유사도</b> — 두 API의 <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">bidNtceNm</code>을 단어(2글자↑) 단위로 쪼개서 34% 이상 겹치면 유사 공고로 판단 (+13점, 기관까지 겹치면 +30점)<br>
+        <b>③ 분야 일치</b> — <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">bidClsfcNo</code>만 같으면 약한 신호로 처리 (+5점)
+      </div>
+    </div>
+
   </div>
 </div>
 </main>
@@ -777,6 +851,7 @@ function showPage(id,btn){
   else if(id==='pipeline') loadPipeline();
   else if(id==='today') loadToday();
   else if(id==='settings') loadScsbidMeta();
+  else if(id==='search') loadScsbidMiniStatus();
 }
 
 var _logTargetId = 'log-box';
@@ -1214,6 +1289,29 @@ async function doDelete(){
 // ═══ 나라장터 API ═══
 // ═══ 데이터소스 선택 ═══
 var _currentSrc = 'scsbid'; // 'scsbid' 또는 'cntrct'
+
+// ─ 검색 페이지에서 낙찰DB 상태 미니 표시 + 빠른 업데이트
+async function loadScsbidMiniStatus() {
+  var el = document.getElementById('scsbid-mini-status');
+  if (!el) return;
+  try {
+    var snap = await db.collection('scsbidMeta').doc('main').get();
+    if (!snap.exists) {
+      el.innerHTML = '⚠️ 낙찰DB 미구축 — <a href="#" onclick="showPage(&apos;settings&apos;,document.querySelectorAll(&apos;.nav&apos;)[6]);return false;" style="color:var(--danger)">설정에서 최초 학습 실행</a>';
+      return;
+    }
+    var m = snap.data();
+    el.innerHTML = '🏆 낙찰DB: ' + (m.earliestDate||'-') + '~' + (m.latestDate||'-') + ' · ' + (m.totalCompanies||0) + '개사 · 마지막 업데이트 ' + (m.lastUpdatedStr||'-');
+  } catch(e) {}
+}
+
+async function quickUpdateScsbid() {
+  var btn = document.getElementById('scsbid-quick-update-btn');
+  btn.disabled = true; btn.textContent = '⏳ 갱신 중...';
+  await updateScsbidHistory();
+  btn.disabled = false; btn.textContent = '🏆 낙찰DB 최신화';
+  loadScsbidMiniStatus();
+}
 
 function setSrc(src, btn) {
   _currentSrc = src;
@@ -1667,8 +1765,10 @@ async function initScsbidHistory(years) {
 }
 
 async function updateScsbidHistory() {
-  _logTargetId = 'scsbid-log-box';
-  var box = document.getElementById('scsbid-log-box'); if (box) box.textContent = '';
+  // 현재 화면에 scsbid-log-box가 있으면 그쪽에, 없으면(검색 페이지) 기존 log-box에 출력
+  var hasOwnBox = !!document.getElementById('scsbid-log-box');
+  _logTargetId = hasOwnBox ? 'scsbid-log-box' : 'log-box';
+  var box = document.getElementById(_logTargetId); if (box) box.textContent = '';
   var btn = document.getElementById('scsbid-update-btn'); if (btn) { btn.disabled = true; btn.textContent = '⏳ 업데이트 중...'; }
   try {
     var metaSnap = await db.collection('scsbidMeta').doc('main').get();
@@ -1707,7 +1807,7 @@ async function updateScsbidHistory() {
   }
   if (btn) { btn.disabled = false; btn.textContent = '⚡ 최신 데이터만 업데이트'; }
   _logTargetId = 'log-box';
-  loadScsbidMeta();
+  if (hasOwnBox) loadScsbidMeta();
 }
 
 async function loadScsbidMeta() {
