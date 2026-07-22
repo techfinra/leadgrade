@@ -779,19 +779,26 @@ var STATUS_LOG_ID = 'log-box'; // 현재 로그를 표시할 대상 (검색 탭 
 
 // ─ Vercel 프록시 공통 호출 (전역: 검색·낙찰DB구축 양쪽에서 공용 사용)
 async function naraFetch(svc, ep, qs) {
-  var proxyUrl = '/api/nara?' + qs + '&_ep=' + ep + '&_svc=' + svc;
-  var r = await fetch(proxyUrl, {signal: AbortSignal.timeout(18000)})
-    .catch(function() {
-      var direct = 'https://apis.data.go.kr/1230000/' + (svc==='BidPublicInfoService'?'ad':'as') + '/' + svc + '/' + ep + '?' + qs;
-      return fetch(direct, {signal: AbortSignal.timeout(12000)});
-    });
-  var txt = await r.text();
-  if (!txt || txt.length < 50) return { items: [], totalCount: 0 };
-  if (txt.indexOf('_debug') >= 0) { try { var d=JSON.parse(txt); log('⚠️ 서버오류: '+d._status+' path:'+d._path); } catch(e){} return { items: [], totalCount: 0 }; }
-
-  var isRealError = txt.indexOf('nkoneps.com.response.ResponseError') >= 0;
-
+  // 어떤 경우에도 예외를 던지지 않고 안전한 기본값을 반환 (장시간 수집 중 하나만 실패해도 전체가 죽지 않도록)
   try {
+    var proxyUrl = '/api/nara?' + qs + '&_ep=' + ep + '&_svc=' + svc;
+    var r;
+    try {
+      r = await fetch(proxyUrl, {signal: AbortSignal.timeout(18000)});
+    } catch(e1) {
+      try {
+        var direct = 'https://apis.data.go.kr/1230000/' + (svc==='BidPublicInfoService'?'ad':'as') + '/' + svc + '/' + ep + '?' + qs;
+        r = await fetch(direct, {signal: AbortSignal.timeout(12000)});
+      } catch(e2) {
+        log('⚠️ 네트워크 오류 ['+svc+'/'+ep+']: ' + e2.message + ' — 이 구간은 건너뜁니다');
+        return { items: [], totalCount: 0 };
+      }
+    }
+    var txt = await r.text();
+    if (!txt || txt.length < 50) return { items: [], totalCount: 0 };
+    if (txt.indexOf('_debug') >= 0) { try { var d=JSON.parse(txt); log('⚠️ 서버오류: '+d._status+' path:'+d._path); } catch(e){} return { items: [], totalCount: 0 }; }
+
+    var isRealError = txt.indexOf('nkoneps.com.response.ResponseError') >= 0;
     var j = JSON.parse(txt);
 
     if (isRealError) {
@@ -810,7 +817,10 @@ async function naraFetch(svc, ep, qs) {
     var its = Array.isArray(bi) ? bi : (bi && bi.item ? (Array.isArray(bi.item) ? bi.item : [bi.item]) : []);
     var tc  = parseInt(body.totalCount) || 0;
     return { items: its, totalCount: tc };
-  } catch(e) { log('❌ 파싱실패 ['+svc+'/'+ep+']: ' + e.message + ' | ' + txt.slice(0,120)); return { items: [], totalCount: 0 }; }
+  } catch(e) {
+    log('❌ 예상외 오류 ['+svc+'/'+ep+']: ' + e.message + ' — 이 구간은 건너뜁니다');
+    return { items: [], totalCount: 0 };
+  }
 }
 
 // ─ 여러 페이지를 targetCount까지 순차 수집하는 공통 헬퍼
@@ -1643,22 +1653,36 @@ function scsbidAggregateWindow(items, targetMap) {
   });
 }
 
-async function scsbidFetchWindows(windows, onProgress) {
+async function scsbidFetchWindows(windows, onWindowDone, checkpointEvery, onCheckpoint) {
   var map = {};
   var eps = ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng'];
+  var lastWin = null;
   for (var wi = 0; wi < windows.length; wi++) {
     var w = windows[wi];
-    function qsFn(pg){
-      return 'ServiceKey=' + API_KEY + '&pageNo=' + pg + '&numOfRows=' + NARA_PAGE_SIZE + '&type=json' +
-        '&inqryDiv=1&inqryBgnDt=' + w.bgn + '0000' + '&inqryEndDt=' + w.end + '2359';
-    }
+    lastWin = w;
+    var qsFn = (function(win){
+      return function(pg){
+        return 'ServiceKey=' + API_KEY + '&pageNo=' + pg + '&numOfRows=' + NARA_PAGE_SIZE + '&type=json' +
+          '&inqryDiv=1&inqryBgnDt=' + win.bgn + '0000' + '&inqryEndDt=' + win.end + '2359';
+      };
+    })(w);
     var windowItems = [];
-    await Promise.all(eps.map(async function(ep){
-      var its = await naraFetchAll('ScsbidInfoService', ep, qsFn, 500, 5);
-      windowItems = windowItems.concat(its);
-    }));
+    try {
+      await Promise.all(eps.map(async function(ep){
+        var its = await naraFetchAll('ScsbidInfoService', ep, qsFn, 500, 5);
+        windowItems = windowItems.concat(its);
+      }));
+    } catch(e) {
+      log('⚠️ 구간 처리 중 오류(건너뜀): ' + e.message);
+    }
     scsbidAggregateWindow(windowItems, map);
-    if (onProgress) onProgress(wi+1, windows.length, Object.keys(map).length, windowItems.length);
+    if (onWindowDone) onWindowDone(wi+1, windows.length, Object.keys(map).length, windowItems.length, w);
+
+    var isCheckpoint = checkpointEvery && ((wi+1) % checkpointEvery === 0 || wi+1 === windows.length);
+    if (isCheckpoint && onCheckpoint) {
+      await onCheckpoint(map, wi+1, windows.length, w);
+      map = {}; // 저장한 만큼은 비우고 다음 구간부터 새 델타로 누적 (증분병합 정확성 보장)
+    }
   }
   return map;
 }
@@ -1679,10 +1703,10 @@ async function scsbidSaveMapToFirestore(map, isFullRebuild) {
       }, { merge: !isFullRebuild });
     });
     await batch.commit();
-    log('  💾 저장 진행 ' + Math.min(i+chunkSize, keys.length) + '/' + keys.length + '개사...');
   }
 }
 
+// ─ 기존 Firestore 문서에 델타(map)를 "더해서" 반영 (덮어쓰기 아님 — 중단·재개해도 정확)
 async function scsbidMergeIncremental(deltaMap) {
   var keys = Object.keys(deltaMap);
   var chunkSize = 20; // 읽기+쓰기라 청크 작게
@@ -1732,33 +1756,81 @@ function makeWindows(startDaysAgo, endDaysAgo) {
   return windows;
 }
 
+// ─ 최초 학습: 10구간마다 증분 저장(delta merge) + 진행상태 기록 → 중단돼도 안전하게 이어서 진행
 async function initScsbidHistory(years) {
   years = years || 15;
   _logTargetId = 'scsbid-log-box';
   var box = document.getElementById('scsbid-log-box'); if (box) box.textContent = '';
   var btn = document.getElementById('scsbid-init-btn'); if (btn) { btn.disabled = true; btn.textContent = '⏳ 학습 중...'; }
-  log('🏆 낙찰이력 DB 최초 학습 시작 — 최근 ' + years + '년치, 30일 단위로 나눠 수집합니다 (시간이 오래 걸립니다)');
-  var windows = makeWindows(years*365, 0);
-  log('총 ' + windows.length + '개 구간 예정');
-  var map = await scsbidFetchWindows(windows, function(done, total, companies, itemsThisWindow){
-    log('[' + done + '/' + total + '] 이번 구간 ' + itemsThisWindow + '건 · 누적 업체 ' + companies + '개사');
+
+  try {
+  var progressRef = db.collection('scsbidMeta').doc('initProgress');
+  var progressSnap = await progressRef.get().catch(function(){return null;});
+  var startDaysAgo = years * 365;
+  var resuming = false;
+  if (progressSnap && progressSnap.exists) {
+    var p = progressSnap.data();
+    if (p.status === 'running' && p.remainingDaysAgo) {
+      startDaysAgo = p.remainingDaysAgo;
+      resuming = true;
+      log('🔁 이전에 중단된 지점부터 이어서 진행합니다 (남은 구간: ' + startDaysAgo + '일 전부터, 이미 저장된 데이터는 안전하게 보존됨)');
+    }
+  }
+
+  var windows = makeWindows(startDaysAgo, 0);
+  log((resuming ? '이어서 ' : '') + '총 ' + windows.length + '개 구간 예정 (30일 단위, 10구간마다 자동저장)');
+
+  await progressRef.set({ status: 'running', totalWindows: windows.length, doneWindows: 0, remainingDaysAgo: startDaysAgo, startedAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+  await scsbidFetchWindows(
+    windows,
+    function(done, total, companies, itemsThisWindow, win){
+      log('[' + done + '/' + total + '] ' + win.bgn + '~' + win.end + ' · 이번구간 ' + itemsThisWindow + '건 · 배치누적 ' + companies + '개사');
+    },
+    10,
+    async function(deltaMap, done, total, lastWin){
+      var n = Object.keys(deltaMap).length;
+      log('  💾 중간저장 중... (' + n + '개사 증분 병합)');
+      await scsbidMergeIncremental(deltaMap);
+      var remaining = Math.max(0, daysAgoFromDateStr(lastWin.end) - 1);
+      await progressRef.set({
+        status: done === total ? 'done' : 'running',
+        totalWindows: total, doneWindows: done,
+        remainingDaysAgo: remaining,
+        lastSavedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      log('  ✅ 저장 완료 — 여기까지는 안전하게 보존됩니다 (' + done + '/' + total + ')');
+    }
+  );
+
+  log('📦 전체 수집 루프 종료. 최종 집계 계산 중...');
+
+  var finalSnap = await db.collection('scsbidCompanies').get();
+  var totalBidCount = 0, earliestArr = [], latestArr = [];
+  finalSnap.forEach(function(d){
+    var v = d.data();
+    totalBidCount += (v.count||0);
+    if (v.firstDate) earliestArr.push(v.firstDate);
+    if (v.lastDate) latestArr.push(v.lastDate);
   });
-  log('📦 수집 완료 — 총 ' + Object.keys(map).length + '개사. Firestore 저장 중...');
-  await scsbidSaveMapToFirestore(map, true);
-  var allDates = Object.values(map).map(function(m){return m.lastDate;}).filter(Boolean).sort();
-  var allFirst = Object.values(map).map(function(m){return m.firstDate;}).filter(Boolean).sort();
-  var totalBidCount = Object.values(map).reduce(function(s,m){return s+m.count;},0);
+  earliestArr.sort(); latestArr.sort();
+
   await db.collection('scsbidMeta').doc('main').set({
-    earliestDate: allFirst[0] || dateStr(-years*365),
-    latestDate: allDates[allDates.length-1] || dateStr(0),
-    totalCompanies: Object.keys(map).length,
+    earliestDate: earliestArr[0] || dateStr(-years*365),
+    latestDate: latestArr[latestArr.length-1] || dateStr(0),
+    totalCompanies: finalSnap.size,
     totalBidCount: totalBidCount,
     lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
     lastUpdatedStr: new Date().toLocaleString('ko-KR'),
     lastFetchedUntil: dateStr(0)
   });
-  log('✅ 낙찰이력 DB 구축 완료! ' + Object.keys(map).length + '개사, 낙찰 ' + totalBidCount + '건');
-  showToast('✅ 낙찰이력 DB 구축 완료 (' + Object.keys(map).length + '개사)');
+  await progressRef.set({ status: 'done' }, { merge: true });
+  log('✅ 낙찰이력 DB 구축 완료! ' + finalSnap.size + '개사, 낙찰 ' + totalBidCount + '건');
+  showToast('✅ 낙찰이력 DB 구축 완료 (' + finalSnap.size + '개사)');
+  } catch(e) {
+    log('❌ 학습 중 오류 발생: ' + e.message + ' — 지금까지 진행분은 저장돼 있으니, 버튼을 다시 누르면 이어서 진행됩니다.');
+    showToast('⚠️ 학습 중단됨 — 다시 누르면 이어서 진행됩니다');
+  }
   if (btn) { btn.disabled = false; btn.textContent = '🔄 최초 학습 시작 (15년치)'; }
   _logTargetId = 'log-box';
   loadScsbidMeta();
@@ -1814,14 +1886,24 @@ async function loadScsbidMeta() {
   var el = document.getElementById('scsbid-status-card');
   if (!el) return;
   try {
+    var progSnap = await db.collection('scsbidMeta').doc('initProgress').get();
+    var initBtn = document.getElementById('scsbid-init-btn');
+    if (progSnap.exists && progSnap.data().status === 'running') {
+      var p = progSnap.data();
+      el.innerHTML = '<div style="font-size:12px;color:var(--warn);background:rgba(179,92,0,.08);border:1px solid rgba(179,92,0,.25);border-radius:8px;padding:10px 12px;line-height:1.7">⏸️ 이전 학습이 중단된 상태입니다 (' + (p.doneWindows||0) + '/' + (p.totalWindows||0) + '구간 완료). 지금까지 데이터는 안전하게 저장돼 있습니다. [최초 학습 시작]을 다시 누르면 <b>중단된 지점부터 이어서</b> 진행합니다.</div>';
+      if (initBtn) initBtn.textContent = '▶️ 이어서 학습 진행';
+    } else {
+      if (initBtn) initBtn.textContent = '🔄 최초 학습 시작 (15년치)';
+    }
+
     var snap = await db.collection('scsbidMeta').doc('main').get();
     if (!snap.exists) {
-      el.innerHTML = '<div style="font-size:12px;color:var(--text3)">아직 낙찰이력 DB가 구축되지 않았습니다. 아래 [최초 학습]을 실행하세요.</div>';
+      el.innerHTML += '<div style="font-size:12px;color:var(--text3);margin-top:8px">아직 낙찰이력 DB가 구축되지 않았습니다. 아래 [최초 학습]을 실행하세요.</div>';
       return;
     }
     var m = snap.data();
-    el.innerHTML =
-      '<div class="sum-card" style="grid-template-columns:1fr 1fr">' +
+    el.innerHTML +=
+      '<div class="sum-card" style="grid-template-columns:1fr 1fr;margin-top:8px">' +
       '<div class="sum-item"><div class="sum-ico" style="background:rgba(200,136,10,.12);color:var(--gold)">📅</div><div><div class="sum-txt-lbl">데이터 커버리지</div><div class="sum-txt-val">' + (m.earliestDate||'-') + ' ~ ' + (m.latestDate||'-') + '</div></div></div>' +
       '<div class="sum-item"><div class="sum-ico" style="background:rgba(26,111,232,.12);color:var(--blue)">🏢</div><div><div class="sum-txt-lbl">보유 데이터</div><div class="sum-txt-val">' + (m.totalCompanies||0) + '개사 · ' + (m.totalBidCount||0) + '건</div></div></div>' +
       '<div class="sum-foot"><span style="font-size:14px">🕐</span>마지막 업데이트: ' + (m.lastUpdatedStr||'-') + '</div>' +
@@ -1969,6 +2051,13 @@ function markDupCheck() {
 function dateStr(d) {
   var dt = new Date(); dt.setDate(dt.getDate() + d);
   return dt.toISOString().slice(0,10).replace(/-/g,'');
+}
+function daysAgoFromDateStr(ymd) {
+  // "20260722" 형식 → 오늘로부터 며칠 전인지 계산
+  if (!ymd || ymd.length < 8) return 0;
+  var iso = ymd.slice(0,4) + '-' + ymd.slice(4,6) + '-' + ymd.slice(6,8);
+  var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  return Math.max(0, diff);
 }
 
 // ═══ 점수 산정: 업체 기반 (낙찰/계약 데이터) ═══
