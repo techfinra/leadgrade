@@ -416,11 +416,13 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       <option value="1000">1,000건</option>
       <option value="all">전체수집 (최대 5,000건)</option>
     </select>
-    <select id="date-range" title="현재 진행 중인 입찰공고를 며칠치 등록분까지 조회할지 정합니다 (낙찰이력 1년 수집과는 별개입니다)">
+    <select id="date-range-preset" title="현재 진행 중인 입찰공고를 며칠치 등록분까지 조회할지 정합니다 (낙찰이력 DB와는 별개입니다)" onchange="onDateRangePresetChange()">
       <option value="30">공고 조회 30일</option>
       <option value="60">공고 조회 60일</option>
       <option value="90">공고 조회 90일</option>
+      <option value="custom">직접 입력...</option>
     </select>
+    <input type="number" id="date-range" value="30" min="1" max="365" style="width:90px;display:none" title="직접 입력한 일수" placeholder="일수">
     <button class="btn btn-primary" id="fetch-btn" onclick="fetchLeads()">🚀 수집 시작</button>
     <button class="btn btn-gold" id="save-all-btn" onclick="saveAllA()" style="display:none">⚡ A등급 일괄 저장</button>
   </div>
@@ -463,6 +465,18 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <div style="max-width:540px">
     <div class="settings-card"><h3>🔑 나라장터 API 키</h3><input type="text" id="api-key-input" value="5e28545eb4cc2148cc0a3dc9eb8d273018db18537aa28ed21e7983ed66363aef"><button class="btn btn-primary" onclick="saveApiKey()">저장</button></div>
     <div class="settings-card"><h3>📋 내부 고객 CSV 업로드</h3><p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.7">사업자번호, 기업명, 등급보유여부(Y/N), 만료일</p><input type="file" id="csv-file" accept=".csv" style="font-size:12px;margin-bottom:10px;display:block;color:var(--text2)"><button class="btn btn-primary" onclick="uploadCSV()">📤 업로드</button><div id="csv-msg" style="margin-top:8px;font-size:12px;color:var(--success)"></div></div>
+    <div style="background:linear-gradient(135deg,rgba(200,136,10,.08),rgba(26,111,232,.05));border:1.5px solid rgba(200,136,10,.25);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:14px">
+      <h3 style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px">🏆 낙찰이력 DB 관리</h3>
+      <p style="font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:10px">낙찰이력은 매번 실시간으로 API를 호출하지 않고, <b>사전에 DB로 구축</b>해두고 검색할 때는 이 DB에서 즉시 조회합니다. 처음 한 번만 "최초 학습"으로 최근 15년치를 모아두고, 이후엔 "업데이트"로 그 이후 신규 낙찰분만 추가하면 됩니다.</p>
+      <div id="scsbid-status-card" style="margin-bottom:12px">조회 중...</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-gold" id="scsbid-init-btn" onclick="initScsbidHistory(15)">🔄 최초 학습 시작 (15년치)</button>
+        <button class="btn btn-primary" id="scsbid-update-btn" onclick="updateScsbidHistory()">⚡ 최신 데이터만 업데이트</button>
+      </div>
+      <p style="font-size:10.5px;color:var(--text3);margin-top:8px;line-height:1.6">⚠️ 최초 학습은 API를 30일 단위로 180번(15년×12) 호출하므로 <b>시간이 오래 걸립니다</b> (수십 분 소요 가능). 브라우저 탭을 닫지 말고 기다려주세요. 이후 업데이트는 신규분만 가져오므로 훨씬 빠릅니다.</p>
+      <div class="log-box" id="scsbid-log-box" style="margin-top:10px;max-height:160px"></div>
+    </div>
+
     <div style="background:rgba(179,92,0,.06);border:1.5px solid rgba(179,92,0,.2);border-radius:var(--radius-lg);padding:16px 18px"><h3 style="font-size:12px;font-weight:700;color:var(--warn);margin-bottom:6px">⚠️ CORS 안내</h3><p style="font-size:12px;color:var(--text3);line-height:1.7">직접호출(분야별 병렬) → allorigins → corsproxy 순 자동 시도.</p></div>
 
     <div style="background:rgba(217,45,45,.06);border:1.5px solid rgba(217,45,45,.25);border-radius:var(--radius-lg);padding:16px 18px;margin-top:14px">
@@ -686,6 +700,59 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 var API_KEY='5e28545eb4cc2148cc0a3dc9eb8d273018db18537aa28ed21e7983ed66363aef';
 var searchLeads=[], savedLeads=[], _allLeads=[], internalDB=[];
 var CUSTOMER_SET = new Set(); // 설정 탭 CSV 업로드 시 사업자번호로 채워짐
+var NARA_PAGE_SIZE = 100;
+var STATUS_LOG_ID = 'log-box'; // 현재 로그를 표시할 대상 (검색 탭 기본값)
+
+// ─ Vercel 프록시 공통 호출 (전역: 검색·낙찰DB구축 양쪽에서 공용 사용)
+async function naraFetch(svc, ep, qs) {
+  var proxyUrl = '/api/nara?' + qs + '&_ep=' + ep + '&_svc=' + svc;
+  var r = await fetch(proxyUrl, {signal: AbortSignal.timeout(18000)})
+    .catch(function() {
+      var direct = 'https://apis.data.go.kr/1230000/' + (svc==='BidPublicInfoService'?'ad':'as') + '/' + svc + '/' + ep + '?' + qs;
+      return fetch(direct, {signal: AbortSignal.timeout(12000)});
+    });
+  var txt = await r.text();
+  if (!txt || txt.length < 50) return { items: [], totalCount: 0 };
+  if (txt.indexOf('_debug') >= 0) { try { var d=JSON.parse(txt); log('⚠️ 서버오류: '+d._status+' path:'+d._path); } catch(e){} return { items: [], totalCount: 0 }; }
+
+  var isRealError = txt.indexOf('nkoneps.com.response.ResponseError') >= 0;
+
+  try {
+    var j = JSON.parse(txt);
+
+    if (isRealError) {
+      var eh = (j['nkoneps.com.response.ResponseError'] || {}).header || {};
+      log('⚠️ API 오류 ['+svc+'/'+ep+']: ' + (eh.resultCode||'?') + ' — ' + (eh.resultMsg||txt.slice(0,80)));
+      return { items: [], totalCount: 0 };
+    }
+
+    var body = (j.response && j.response.body) || j.body || j;
+    var hdr  = (j.response && j.response.header) || {};
+    if (hdr.resultCode && hdr.resultCode !== '00') {
+      log('⚠️ API 결과코드 ['+svc+'/'+ep+']: ' + hdr.resultCode + ' — ' + hdr.resultMsg);
+      return { items: [], totalCount: 0 };
+    }
+    var bi  = body.items;
+    var its = Array.isArray(bi) ? bi : (bi && bi.item ? (Array.isArray(bi.item) ? bi.item : [bi.item]) : []);
+    var tc  = parseInt(body.totalCount) || 0;
+    return { items: its, totalCount: tc };
+  } catch(e) { log('❌ 파싱실패 ['+svc+'/'+ep+']: ' + e.message + ' | ' + txt.slice(0,120)); return { items: [], totalCount: 0 }; }
+}
+
+// ─ 여러 페이지를 targetCount까지 순차 수집하는 공통 헬퍼
+async function naraFetchAll(svc, ep, qsFn, targetCount, maxPages) {
+  var all = [];
+  var r1 = await naraFetch(svc, ep, qsFn(1));
+  all = all.concat(r1.items);
+  var totalPages = Math.min(Math.ceil(r1.totalCount / NARA_PAGE_SIZE) || 1, maxPages);
+  for (var pg = 2; pg <= totalPages; pg++) {
+    if (all.length >= targetCount) break;
+    var rp = await naraFetch(svc, ep, qsFn(pg));
+    if (!rp.items.length) break;
+    all = all.concat(rp.items);
+  }
+  return all;
+}
 var sortKey='', sortDir=-1;
 var STATUSES=['연락전','연락중','미팅예정','계약성공','보류'];
 
@@ -709,9 +776,11 @@ function showPage(id,btn){
   else if(id==='leads') loadLeads();
   else if(id==='pipeline') loadPipeline();
   else if(id==='today') loadToday();
+  else if(id==='settings') loadScsbidMeta();
 }
 
-function log(m){var b=document.getElementById('log-box');b.innerHTML+='\n['+new Date().toLocaleTimeString('ko-KR')+'] '+m;b.scrollTop=b.scrollHeight;}
+var _logTargetId = 'log-box';
+function log(m){var b=document.getElementById(_logTargetId);if(!b)return;b.innerHTML+='\n['+new Date().toLocaleTimeString('ko-KR')+'] '+m;b.scrollTop=b.scrollHeight;}
 
 // ═══ Firebase ═══
 async function fbGet(){
@@ -1171,7 +1240,7 @@ async function fetchLeads() {
   var btn        = document.getElementById('fetch-btn');
   var isAll      = (numRowsVal === 'all');
   var perPage    = isAll ? 5000 : parseInt(numRowsVal);
-  var API_MAX    = 100;
+  // API_MAX는 전역 상수(NARA_PAGE_SIZE) 사용
 
   btn.disabled = true; btn.textContent = '⏳ 수집중...';
   document.getElementById('log-box').textContent = '';
@@ -1182,57 +1251,6 @@ async function fetchLeads() {
   var yr1ago  = dateStr(-365);   // 낙찰이력 목표 3년 (API는 90일씩 분할 수집)
   var d90ago  = dateStr(-90);    // API 최대 허용 범위
 
-  // ─ Vercel 프록시 공통 호출
-  async function naraFetch(svc, ep, qs) {
-    var proxyUrl = '/api/nara?' + qs + '&_ep=' + ep + '&_svc=' + svc;
-    var r = await fetch(proxyUrl, {signal: AbortSignal.timeout(18000)})
-      .catch(function() {
-        var direct = 'https://apis.data.go.kr/1230000/' + (svc==='BidPublicInfoService'?'ad':'as') + '/' + svc + '/' + ep + '?' + qs;
-        return fetch(direct, {signal: AbortSignal.timeout(12000)});
-      });
-    var txt = await r.text();
-    if (!txt || txt.length < 50) return { items: [], totalCount: 0 };
-    if (txt.indexOf('_debug') >= 0) { try { var d=JSON.parse(txt); log('⚠️ 서버오류: '+d._status+' path:'+d._path); } catch(e){} return { items: [], totalCount: 0 }; }
-
-    var isRealError = txt.indexOf('nkoneps.com.response.ResponseError') >= 0;
-
-    try {
-      var j = JSON.parse(txt);
-
-      if (isRealError) {
-        var eh = (j['nkoneps.com.response.ResponseError'] || {}).header || {};
-        log('⚠️ API 오류 ['+svc+'/'+ep+']: ' + (eh.resultCode||'?') + ' — ' + (eh.resultMsg||txt.slice(0,80)));
-        return { items: [], totalCount: 0 };
-      }
-
-      var body = (j.response && j.response.body) || j.body || j;
-      var hdr  = (j.response && j.response.header) || {};
-      if (hdr.resultCode && hdr.resultCode !== '00') {
-        log('⚠️ API 결과코드 ['+svc+'/'+ep+']: ' + hdr.resultCode + ' — ' + hdr.resultMsg);
-        return { items: [], totalCount: 0 };
-      }
-      var bi  = body.items;
-      var its = Array.isArray(bi) ? bi : (bi && bi.item ? (Array.isArray(bi.item) ? bi.item : [bi.item]) : []);
-      var tc  = parseInt(body.totalCount) || 0;
-      if (its.length > 0) log('✅ ['+ep.slice(-6)+'] ' + its.length + '건 수신 (전체 ' + tc + '건)');
-      return { items: its, totalCount: tc };
-    } catch(e) { log('❌ 파싱실패 ['+svc+'/'+ep+']: ' + e.message + ' | ' + txt.slice(0,120)); return { items: [], totalCount: 0 }; }
-  }
-
-  // ─ 여러 페이지를 perPage 목표까지 순차 수집하는 공통 헬퍼
-  async function naraFetchAll(svc, ep, qsFn, targetCount, maxPages) {
-    var all = [];
-    var r1 = await naraFetch(svc, ep, qsFn(1));
-    all = all.concat(r1.items);
-    var totalPages = Math.min(Math.ceil(r1.totalCount / API_MAX) || 1, maxPages);
-    for (var pg = 2; pg <= totalPages; pg++) {
-      if (all.length >= targetCount) break;
-      var rp = await naraFetch(svc, ep, qsFn(pg));
-      if (!rp.items.length) break;
-      all = all.concat(rp.items);
-    }
-    return all;
-  }
 
   // ─ STEP 1: 현재 입찰공고 수집 (마감일 > 오늘)
   log('🔍 STEP 1 — 현재 입찰공고 수집 중...');
@@ -1241,7 +1259,7 @@ async function fetchLeads() {
 
   function makeBidQs(pg) {
     return 'ServiceKey=' + API_KEY +
-      '&pageNo=' + pg + '&numOfRows=' + API_MAX + '&type=json' +
+      '&pageNo=' + pg + '&numOfRows=' + NARA_PAGE_SIZE + '&type=json' +
       '&inqryDiv=1' +
       '&inqryBgnDt=' + dateStr(-parseInt(dayRange)) + '0000' +
       '&inqryEndDt=' + today  + '2359' +
@@ -1264,71 +1282,37 @@ async function fetchLeads() {
   }));
   log('📋 입찰공고 총 ' + bidItems.length + '건 (마감 미경과)');
 
-  // ─ STEP 2: 최근 3년 낙찰이력 수집 (Vercel 프록시)
-  log('🏆 STEP 2 — 최근 3년 낙찰이력 수집 중...');
-  var scsbidEpMap = { '1':'getScsbidListSttusCnstwk', '2':'getScsbidListSttusServc', '3':'getScsbidListSttusThng' };
-  var scsbidEps   = bidType ? [scsbidEpMap[bidType]] : ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng'];
-
-  // 낙찰이력: 30일씩 12개월로 나눠 1년치 수집 (API 최대 30일 제한)
-  var quarters = [];
-  for (var qi2 = 0; qi2 < 36; qi2++) {
-    quarters.push({ bgn: dateStr(-(qi2+1)*30), end: dateStr(-qi2*30 - (qi2===0?0:1)) });
+  // ─ STEP 2: 사전 구축된 낙찰이력 DB에서 즉시 조회 (실시간 API 호출 없음 → 빠름)
+  log('🏆 STEP 2 — 낙찰이력 DB(Firestore 캐시) 조회 중...');
+  var compMap = {};  // { key: { nm, bizno, count, totalAmt, fields:Set, orgs:Set, bidNames:[], lastDate } }
+  var scsbidMetaSnap;
+  try {
+    scsbidMetaSnap = await db.collection('scsbidMeta').doc('main').get();
+  } catch(e) {}
+  if (!scsbidMetaSnap || !scsbidMetaSnap.exists) {
+    log('⚠️ 낙찰이력 DB가 아직 구축되지 않았습니다. [설정] 탭에서 "최초 학습"을 먼저 실행하세요.');
+  } else {
+    var meta = scsbidMetaSnap.data();
+    log('🏅 낙찰이력 DB: ' + (meta.earliestDate||'?') + ' ~ ' + (meta.latestDate||'?') + ' · ' + (meta.totalCompanies||0) + '개사 · 최근 업데이트: ' + (meta.lastUpdatedStr||'-'));
+    try {
+      var compSnap = await db.collection('scsbidCompanies').get();
+      compSnap.forEach(function(d){
+        var v = d.data();
+        compMap[d.id] = {
+          nm: v.nm, bizno: v.bizno, count: v.count||0, totalAmt: v.totalAmt||0,
+          fields: new Set(v.fields||[]), orgs: new Set(v.orgs||[]), bidNames: v.bidNames||[], lastDate: v.lastDate||''
+        };
+      });
+    } catch(e) { log('❌ 낙찰이력 DB 조회 실패: ' + e.message); }
   }
+  var compKeys = Object.keys(compMap);
+  log('🔗 STEP 3 — 업체 ' + compKeys.length + '개사 확보, 교차매칭 준비 완료');
 
-  function makeScsbidQs(pg, bgn, end2) {
-    return 'ServiceKey=' + API_KEY +
-      '&pageNo=' + pg + '&numOfRows=' + API_MAX + '&type=json' +
-      '&inqryDiv=1' +
-      '&inqryBgnDt=' + bgn  + '0000' +
-      '&inqryEndDt=' + end2 + '2359';
-  }
-
-  var scsbidItems = [];
-  var scsbidTarget = Math.max(perPage * 4, 400);
-  for (var qi = 0; qi < quarters.length; qi++) {
-    var q = quarters[qi];
-    btn.textContent = '⏳ 낙찰이력 ' + (qi+1) + '/36개월...';
-    await Promise.all(scsbidEps.map(async function(ep) {
-      var its = await naraFetchAll('ScsbidInfoService', ep, function(pg){ return makeScsbidQs(pg, q.bgn, q.end); }, scsbidTarget, 5);
-      scsbidItems = scsbidItems.concat(its);
-    }));
-    log('[낙찰 ' + (qi+1) + '/36개월] 누적 ' + scsbidItems.length + '건');
-    if (scsbidItems.length >= scsbidTarget) break;
-  }
-  log('🏅 낙찰이력 총 ' + scsbidItems.length + '건');
-
-  if (!bidItems.length && !scsbidItems.length) {
+  if (!bidItems.length && !compKeys.length) {
     log('⚠️ 데이터 없음 → 목업 표시');
     window._isMock = true;
     searchLeads = getMock(); markDupCheck(); finishFetch(btn); return;
   }
-
-  // ─ STEP 3: 낙찰이력 업체별 집계 (사업자번호 기준 + 기관/공고명 이력 보존)
-  log('🔗 STEP 3 — 업체별 낙찰이력 집계 중...');
-  var compMap = {};  // { key: { nm, bizno, count, totalAmt, fields:Set, orgs:Set, bidNames:[], lastDate } }
-  scsbidItems.forEach(function(s) {
-    var bizno = s.bidwinnrBizno || s.sucsfbidCorpBizno || '';
-    var nm    = s.bidwinnrNm    || s.sucsfbidCorpNm    || '';
-    if (!bizno && !nm) return;
-    var key = bizno || nm;
-    var amt = parseFloat(s.sucsfbidAmt || 0);
-    var dt  = s.fnlSucsfDate || s.rlOpengDt || s.rgstDt || '';
-    var fld = s.bidClsfcNo || '';
-    var org = s.dminsttNm || '';
-    var bnm = s.bidNtceNm || '';
-    if (!compMap[key]) {
-      compMap[key] = { nm:nm, bizno:bizno, count:0, totalAmt:0, fields:new Set(), orgs:new Set(), bidNames:[], lastDate:dt };
-    }
-    var m = compMap[key];
-    m.count++;
-    m.totalAmt += amt;
-    if (fld) m.fields.add(fld);
-    if (org) m.orgs.add(org);
-    if (bnm && m.bidNames.length < 30) m.bidNames.push(bnm);
-    if (dt > m.lastDate) m.lastDate = dt;
-  });
-  var compKeys = Object.keys(compMap);
-  log('🏢 낙찰이력 업체 ' + compKeys.length + '개사 집계 완료');
 
   // ─ 공고명 토큰화 (2글자 이상 단어)
   function tokenize(s) {
@@ -1514,9 +1498,9 @@ async function fetchLeads() {
   window._collectSummary = {
     bidDays: dayRange,
     bidCount: bidItems.length,
-    scsbidYears: 3,
-    scsbidCount: scsbidItems.length,
+    scsbidRange: (typeof meta !== 'undefined' && meta) ? (meta.earliestDate + ' ~ ' + meta.latestDate) : '미구축',
     scsbidCompanies: compKeys.length,
+    scsbidTotalBidCount: (typeof meta !== 'undefined' && meta) ? (meta.totalBidCount||0) : 0,
     matchedCount: resultItems.length
   };
   searchLeads = resultItems;
@@ -1532,9 +1516,231 @@ function renderCollectSummary(aCount, bCount, cCount, dupCount) {
   card.style.display = 'grid';
   card.className = 'sum-card';
   card.innerHTML =
-    '<div class="sum-item"><div class="sum-ico" style="background:rgba(26,111,232,.12);color:var(--blue)">📋</div><div><div class="sum-txt-lbl">입찰공고 조회</div><div class="sum-txt-val">최근 ' + (s.bidDays||'-') + '일치</div><div class="sum-txt-sub">마감 안 지난 공고 ' + (s.bidCount||0) + '건 확인</div></div></div>' +
-    '<div class="sum-item"><div class="sum-ico" style="background:rgba(200,136,10,.12);color:var(--gold)">🏆</div><div><div class="sum-txt-lbl">낙찰이력 조회</div><div class="sum-txt-val">최근 ' + (s.scsbidYears||3) + '년치</div><div class="sum-txt-sub">낙찰 ' + (s.scsbidCount||0) + '건 · ' + (s.scsbidCompanies||0) + '개사 확인</div></div></div>' +
+    '<div class="sum-item"><div class="sum-ico" style="background:rgba(26,111,232,.12);color:var(--blue)">📋</div><div><div class="sum-txt-lbl">입찰공고 (실시간 조회)</div><div class="sum-txt-val">최근 ' + (s.bidDays||'-') + '일치</div><div class="sum-txt-sub">마감 안 지난 공고 ' + (s.bidCount||0) + '건 확인</div></div></div>' +
+    '<div class="sum-item"><div class="sum-ico" style="background:rgba(200,136,10,.12);color:var(--gold)">🏆</div><div><div class="sum-txt-lbl">낙찰이력 (사전구축 DB)</div><div class="sum-txt-val">' + (s.scsbidRange||'-') + '</div><div class="sum-txt-sub">보유 ' + (s.scsbidCompanies||0) + '개사 · 낙찰 ' + (s.scsbidTotalBidCount||0) + '건</div></div></div>' +
     '<div class="sum-foot"><span style="font-size:14px">🔗</span>두 데이터를 교차분석해 <b style="color:var(--blue)">' + (s.matchedCount||0) + '개사</b>를 추천했어요 (A ' + aCount + ' · B ' + bCount + ' · C ' + cCount + (dupCount>0?' · 중복제외 '+dupCount:'') + ')</div>';
+}
+
+// ═══ 낙찰이력 DB 사전구축·업데이트 ═══
+function scsbidAggregateWindow(items, targetMap) {
+  items.forEach(function(s) {
+    var bizno = s.bidwinnrBizno || s.sucsfbidCorpBizno || '';
+    var nm    = s.bidwinnrNm    || s.sucsfbidCorpNm    || '';
+    if (!bizno && !nm) return;
+    var key = bizno || nm;
+    var amt = parseFloat(s.sucsfbidAmt || 0);
+    var dt  = s.fnlSucsfDate || s.rlOpengDt || s.rgstDt || '';
+    var fld = s.bidClsfcNo || '';
+    var org = s.dminsttNm || '';
+    var bnm = s.bidNtceNm || '';
+    if (!targetMap[key]) targetMap[key] = { nm:nm, bizno:bizno, count:0, totalAmt:0, fields:new Set(), orgs:new Set(), bidNames:[], lastDate:dt, firstDate:dt };
+    var m = targetMap[key];
+    m.count++;
+    m.totalAmt += amt;
+    if (fld) m.fields.add(fld);
+    if (org && m.orgs.size < 20) m.orgs.add(org);
+    if (bnm && m.bidNames.length < 30) m.bidNames.push(bnm);
+    if (dt > m.lastDate) m.lastDate = dt;
+    if (dt && (!m.firstDate || dt < m.firstDate)) m.firstDate = dt;
+  });
+}
+
+async function scsbidFetchWindows(windows, onProgress) {
+  var map = {};
+  var eps = ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng'];
+  for (var wi = 0; wi < windows.length; wi++) {
+    var w = windows[wi];
+    function qsFn(pg){
+      return 'ServiceKey=' + API_KEY + '&pageNo=' + pg + '&numOfRows=' + NARA_PAGE_SIZE + '&type=json' +
+        '&inqryDiv=1&inqryBgnDt=' + w.bgn + '0000' + '&inqryEndDt=' + w.end + '2359';
+    }
+    var windowItems = [];
+    await Promise.all(eps.map(async function(ep){
+      var its = await naraFetchAll('ScsbidInfoService', ep, qsFn, 500, 5);
+      windowItems = windowItems.concat(its);
+    }));
+    scsbidAggregateWindow(windowItems, map);
+    if (onProgress) onProgress(wi+1, windows.length, Object.keys(map).length, windowItems.length);
+  }
+  return map;
+}
+
+async function scsbidSaveMapToFirestore(map, isFullRebuild) {
+  var keys = Object.keys(map);
+  var chunkSize = 400;
+  for (var i = 0; i < keys.length; i += chunkSize) {
+    var batch = db.batch();
+    keys.slice(i, i+chunkSize).forEach(function(k){
+      var m = map[k];
+      var docId = (m.bizno || m.nm || k).replace(/[\/#\[\]]/g,'_').slice(0,300);
+      var ref = db.collection('scsbidCompanies').doc(docId);
+      batch.set(ref, {
+        nm: m.nm||'', bizno: m.bizno||'', count: m.count||0, totalAmt: m.totalAmt||0,
+        fields: Array.from(m.fields||[]), orgs: Array.from(m.orgs||[]).slice(0,20),
+        bidNames: (m.bidNames||[]).slice(0,30), lastDate: m.lastDate||'', firstDate: m.firstDate||''
+      }, { merge: !isFullRebuild });
+    });
+    await batch.commit();
+    log('  💾 저장 진행 ' + Math.min(i+chunkSize, keys.length) + '/' + keys.length + '개사...');
+  }
+}
+
+async function scsbidMergeIncremental(deltaMap) {
+  var keys = Object.keys(deltaMap);
+  var chunkSize = 20; // 읽기+쓰기라 청크 작게
+  for (var i = 0; i < keys.length; i += chunkSize) {
+    var slice = keys.slice(i, i+chunkSize);
+    var batch = db.batch();
+    for (var j = 0; j < slice.length; j++) {
+      var k = slice[j];
+      var d = deltaMap[k];
+      var docId = (d.bizno || d.nm || k).replace(/[\/#\[\]]/g,'_').slice(0,300);
+      var ref = db.collection('scsbidCompanies').doc(docId);
+      var existing = null;
+      try { var snap = await ref.get(); if (snap.exists) existing = snap.data(); } catch(e){}
+      if (existing) {
+        var mergedOrgs = new Set(existing.orgs||[]); (Array.from(d.orgs||[])).forEach(function(o){mergedOrgs.add(o);});
+        var mergedNames = (existing.bidNames||[]).concat(d.bidNames||[]).slice(0,30);
+        batch.set(ref, {
+          nm: existing.nm||d.nm||'', bizno: existing.bizno||d.bizno||'',
+          count: (existing.count||0) + (d.count||0),
+          totalAmt: (existing.totalAmt||0) + (d.totalAmt||0),
+          fields: Array.from(new Set((existing.fields||[]).concat(Array.from(d.fields||[])))),
+          orgs: Array.from(mergedOrgs).slice(0,20),
+          bidNames: mergedNames,
+          lastDate: (d.lastDate||'') > (existing.lastDate||'') ? d.lastDate : existing.lastDate,
+          firstDate: existing.firstDate && existing.firstDate < (d.firstDate||'9999') ? existing.firstDate : (d.firstDate||existing.firstDate||'')
+        }, { merge: false });
+      } else {
+        batch.set(ref, {
+          nm: d.nm||'', bizno: d.bizno||'', count: d.count||0, totalAmt: d.totalAmt||0,
+          fields: Array.from(d.fields||[]), orgs: Array.from(d.orgs||[]).slice(0,20),
+          bidNames: (d.bidNames||[]).slice(0,30), lastDate: d.lastDate||'', firstDate: d.firstDate||''
+        });
+      }
+    }
+    await batch.commit();
+  }
+}
+
+function makeWindows(startDaysAgo, endDaysAgo) {
+  var windows = [];
+  var cursor = startDaysAgo;
+  while (cursor > endDaysAgo) {
+    var winEnd = Math.max(cursor - 30, endDaysAgo);
+    windows.push({ bgn: dateStr(-cursor), end: dateStr(-winEnd - (winEnd>endDaysAgo?1:0)) });
+    cursor = winEnd;
+  }
+  return windows;
+}
+
+async function initScsbidHistory(years) {
+  years = years || 15;
+  _logTargetId = 'scsbid-log-box';
+  var box = document.getElementById('scsbid-log-box'); if (box) box.textContent = '';
+  var btn = document.getElementById('scsbid-init-btn'); if (btn) { btn.disabled = true; btn.textContent = '⏳ 학습 중...'; }
+  log('🏆 낙찰이력 DB 최초 학습 시작 — 최근 ' + years + '년치, 30일 단위로 나눠 수집합니다 (시간이 오래 걸립니다)');
+  var windows = makeWindows(years*365, 0);
+  log('총 ' + windows.length + '개 구간 예정');
+  var map = await scsbidFetchWindows(windows, function(done, total, companies, itemsThisWindow){
+    log('[' + done + '/' + total + '] 이번 구간 ' + itemsThisWindow + '건 · 누적 업체 ' + companies + '개사');
+  });
+  log('📦 수집 완료 — 총 ' + Object.keys(map).length + '개사. Firestore 저장 중...');
+  await scsbidSaveMapToFirestore(map, true);
+  var allDates = Object.values(map).map(function(m){return m.lastDate;}).filter(Boolean).sort();
+  var allFirst = Object.values(map).map(function(m){return m.firstDate;}).filter(Boolean).sort();
+  var totalBidCount = Object.values(map).reduce(function(s,m){return s+m.count;},0);
+  await db.collection('scsbidMeta').doc('main').set({
+    earliestDate: allFirst[0] || dateStr(-years*365),
+    latestDate: allDates[allDates.length-1] || dateStr(0),
+    totalCompanies: Object.keys(map).length,
+    totalBidCount: totalBidCount,
+    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+    lastUpdatedStr: new Date().toLocaleString('ko-KR'),
+    lastFetchedUntil: dateStr(0)
+  });
+  log('✅ 낙찰이력 DB 구축 완료! ' + Object.keys(map).length + '개사, 낙찰 ' + totalBidCount + '건');
+  showToast('✅ 낙찰이력 DB 구축 완료 (' + Object.keys(map).length + '개사)');
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 최초 학습 시작 (15년치)'; }
+  _logTargetId = 'log-box';
+  loadScsbidMeta();
+}
+
+async function updateScsbidHistory() {
+  _logTargetId = 'scsbid-log-box';
+  var box = document.getElementById('scsbid-log-box'); if (box) box.textContent = '';
+  var btn = document.getElementById('scsbid-update-btn'); if (btn) { btn.disabled = true; btn.textContent = '⏳ 업데이트 중...'; }
+  try {
+    var metaSnap = await db.collection('scsbidMeta').doc('main').get();
+    if (!metaSnap.exists) {
+      log('⚠️ 먼저 "최초 학습"을 실행해야 업데이트할 수 있습니다.');
+      if (btn) { btn.disabled = false; btn.textContent = '⚡ 최신 데이터만 업데이트'; }
+      _logTargetId = 'log-box';
+      return;
+    }
+    var meta = metaSnap.data();
+    var lastFetched = meta.lastFetchedUntil || meta.latestDate || dateStr(-30);
+    var daysSince = Math.floor((Date.now() - new Date(lastFetched.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3')).getTime()) / 86400000);
+    if (daysSince <= 0) { log('✅ 이미 최신 상태입니다 (마지막 반영: ' + lastFetched + ')'); if(btn){btn.disabled=false;btn.textContent='⚡ 최신 데이터만 업데이트';} _logTargetId='log-box'; return; }
+    log('🔄 마지막 반영일(' + lastFetched + ') 이후 ' + daysSince + '일치 업데이트 시작...');
+    var windows = makeWindows(daysSince + 2, 0); // 여유 2일 포함, 오늘까지
+    var deltaMap = await scsbidFetchWindows(windows, function(done, total, companies, itemsThisWindow){
+      log('[' + done + '/' + total + '] 이번 구간 ' + itemsThisWindow + '건 · 신규구간 업체 ' + companies + '개사');
+    });
+    log('📦 신규 ' + Object.keys(deltaMap).length + '개사 발견. 기존 DB에 병합 중... (시간 소요될 수 있음)');
+    await scsbidMergeIncremental(deltaMap);
+    var newTotalSnap = await db.collection('scsbidCompanies').get();
+    var newTotalBidCount = 0;
+    newTotalSnap.forEach(function(d){ newTotalBidCount += (d.data().count||0); });
+    await db.collection('scsbidMeta').doc('main').set({
+      totalCompanies: newTotalSnap.size,
+      totalBidCount: newTotalBidCount,
+      latestDate: dateStr(0),
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+      lastUpdatedStr: new Date().toLocaleString('ko-KR'),
+      lastFetchedUntil: dateStr(0)
+    }, { merge: true });
+    log('✅ 업데이트 완료! 총 ' + newTotalSnap.size + '개사, 낙찰 ' + newTotalBidCount + '건');
+    showToast('✅ 낙찰이력 DB 업데이트 완료');
+  } catch(e) {
+    log('❌ 업데이트 오류: ' + e.message);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '⚡ 최신 데이터만 업데이트'; }
+  _logTargetId = 'log-box';
+  loadScsbidMeta();
+}
+
+async function loadScsbidMeta() {
+  var el = document.getElementById('scsbid-status-card');
+  if (!el) return;
+  try {
+    var snap = await db.collection('scsbidMeta').doc('main').get();
+    if (!snap.exists) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3)">아직 낙찰이력 DB가 구축되지 않았습니다. 아래 [최초 학습]을 실행하세요.</div>';
+      return;
+    }
+    var m = snap.data();
+    el.innerHTML =
+      '<div class="sum-card" style="grid-template-columns:1fr 1fr">' +
+      '<div class="sum-item"><div class="sum-ico" style="background:rgba(200,136,10,.12);color:var(--gold)">📅</div><div><div class="sum-txt-lbl">데이터 커버리지</div><div class="sum-txt-val">' + (m.earliestDate||'-') + ' ~ ' + (m.latestDate||'-') + '</div></div></div>' +
+      '<div class="sum-item"><div class="sum-ico" style="background:rgba(26,111,232,.12);color:var(--blue)">🏢</div><div><div class="sum-txt-lbl">보유 데이터</div><div class="sum-txt-val">' + (m.totalCompanies||0) + '개사 · ' + (m.totalBidCount||0) + '건</div></div></div>' +
+      '<div class="sum-foot"><span style="font-size:14px">🕐</span>마지막 업데이트: ' + (m.lastUpdatedStr||'-') + '</div>' +
+      '</div>';
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--danger)">조회 실패: ' + e.message + '</div>';
+  }
+}
+
+function onDateRangePresetChange(){
+  var preset = document.getElementById('date-range-preset').value;
+  var input = document.getElementById('date-range');
+  if (preset === 'custom') {
+    input.style.display = '';
+    input.focus();
+  } else {
+    input.style.display = 'none';
+    input.value = preset;
+  }
 }
 
 function fetchBid() { fetchLeads(); }
