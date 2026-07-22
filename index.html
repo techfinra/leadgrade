@@ -898,40 +898,66 @@ async function quickStatus(docId,status){
 }
 
 // ═══ 파이프라인 ═══
+var _pipelineAll = [];       // fbGet() 결과 캐싱 (더보기용)
+var _pipelineShowCount = {};  // { status: 현재 보여주는 개수 }
+
 async function loadPipeline(){
   var board=document.getElementById('kanban-board');
   board.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="spinner"></div></div>';
   try{
-    var all=await fbGet(); savedLeads=all; _allLeads=all;
+    var all=await fbGet(); savedLeads=all; _allLeads=all; _pipelineAll=all;
+    STATUSES.forEach(function(s){ if(!_pipelineShowCount[s]) _pipelineShowCount[s]=5; });
     // 미저장 A등급 힌트
     var hw=document.getElementById('pipeline-hint-wrap');
     var unsaved=searchLeads.filter(function(l){return !l.isDup&&l.grade==='A';});
     if(unsaved.length>0){
       hw.innerHTML='<div class="hint-banner"><span style="font-size:15px">⭐</span><span style="font-size:13px;color:var(--text2)">잠재고객 발굴에서 <b style="color:var(--gold)">A등급 '+unsaved.length+'건</b> 저장 대기 중</span><button class="btn btn-gold btn-sm" onclick="saveAllA()">⚡ A등급 일괄 저장</button><button onclick="clearPipelineHint()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;margin-left:auto">✕</button></div>';
     } else hw.innerHTML='';
-    var colsHtml='';
-    var STATUS_COLORS={'연락전':'var(--blue)','연락중':'var(--warn)','미팅예정':'var(--purple)','계약성공':'var(--success)','보류':'var(--text3)'};
-    STATUSES.forEach(function(s){
-      var items=all.filter(function(l){return (l.status||'연락전')===s;});
-      colsHtml+='<div class="kanban-col"><div class="kanban-head"><span class="kanban-title" style="color:'+STATUS_COLORS[s]+'">'+s+'</span><span class="kanban-count">'+items.length+'</span></div>';
-      if(!items.length) colsHtml+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px 0">없음</div>';
-      items.forEach(function(l){
-        var idx=all.findIndex(function(x){return x._id===l._id;});
-        var curIdx=STATUSES.indexOf(s);
-        colsHtml+='<div class="kcard" onclick="openPanelSaved('+idx+')">';
-        colsHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+gb(l.grade)+'<span style="font-size:9px;font-weight:800;color:var(--text3)">'+l.score+'점</span></div>';
-        colsHtml+='<div class="kcard-name">'+escH((l.name||'').slice(0,40))+'</div>';
-        colsHtml+='<div class="kcard-org">🏢 '+(l.org||'—').slice(0,20)+'</div>';
-        colsHtml+='<div class="kcard-foot">'+tb(l.type)+'<span style="font-size:11px;color:var(--text3)">'+fa(l.amount)+'</span></div>';
-        colsHtml+='<div class="kcard-move">';
-        if(curIdx>0) colsHtml+='<button class="btn btn-sec btn-xs" data-id="'+l._id+'" data-to="'+STATUSES[curIdx-1]+'" onclick="event.stopPropagation();mvStatus(this)">◀</button>';
-        if(curIdx<STATUSES.length-1) colsHtml+='<button class="btn btn-primary btn-xs" data-id="'+l._id+'" data-to="'+STATUSES[curIdx+1]+'" onclick="event.stopPropagation();mvStatus(this)">▶ '+STATUSES[curIdx+1]+'</button>';
-        colsHtml+='</div></div>';
-      });
-      colsHtml+='</div>';
-    });
-    board.innerHTML=colsHtml;
+    renderPipelineBoard();
   } catch(e){board.innerHTML='<div class="empty" style="grid-column:1/-1">'+errHtml(e)+'</div>';}
+}
+
+function renderPipelineBoard(){
+  var board=document.getElementById('kanban-board');
+  var all=_pipelineAll;
+  var colsHtml='';
+  var STATUS_COLORS={'연락전':'var(--blue)','연락중':'var(--warn)','미팅예정':'var(--purple)','계약성공':'var(--success)','보류':'var(--text3)'};
+  STATUSES.forEach(function(s){
+    var items=all.filter(function(l){return (l.status||'연락전')===s;});
+    var showN=_pipelineShowCount[s]||5;
+    var visible=items.slice(0,showN);
+    colsHtml+='<div class="kanban-col"><div class="kanban-head"><span class="kanban-title" style="color:'+STATUS_COLORS[s]+'">'+s+'</span><span class="kanban-count">'+items.length+'</span></div>';
+    if(!items.length) colsHtml+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px 0">없음</div>';
+    visible.forEach(function(l){
+      var idx=all.findIndex(function(x){return x._id===l._id;});
+      var curIdx=STATUSES.indexOf(s);
+      colsHtml+='<div class="kcard" onclick="openPanelSaved('+idx+')">';
+      colsHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+gb(l.grade)+'<span style="font-size:9px;font-weight:800;color:var(--text3)">'+l.score+'점</span></div>';
+      colsHtml+='<div class="kcard-name">'+escH((l.name||'').slice(0,40))+'</div>';
+      colsHtml+='<div class="kcard-org">🏢 '+(l.org||'—').slice(0,20)+'</div>';
+      colsHtml+='<div class="kcard-foot">'+tb(l.type)+'<span style="font-size:11px;color:var(--text3)">'+fa(l.amount)+'</span></div>';
+      colsHtml+='<div class="kcard-move">';
+      if(curIdx>0) colsHtml+='<button class="btn btn-sec btn-xs" data-id="'+l._id+'" data-to="'+STATUSES[curIdx-1]+'" onclick="event.stopPropagation();mvStatus(this)">◀</button>';
+      if(curIdx<STATUSES.length-1) colsHtml+='<button class="btn btn-primary btn-xs" data-id="'+l._id+'" data-to="'+STATUSES[curIdx+1]+'" onclick="event.stopPropagation();mvStatus(this)">▶ '+STATUSES[curIdx+1]+'</button>';
+      colsHtml+='</div></div>';
+    });
+    if(items.length>showN){
+      colsHtml+='<button class="btn btn-sec btn-sm" style="width:100%;margin-top:4px" onclick="pipelineShowMore(&apos;'+s+'&apos;)">더보기 ('+(items.length-showN)+'개 더) ▾</button>';
+    } else if(showN>5 && items.length>5){
+      colsHtml+='<button class="btn btn-sec btn-sm" style="width:100%;margin-top:4px" onclick="pipelineShowLess(&apos;'+s+'&apos;)">접기 ▴</button>';
+    }
+    colsHtml+='</div>';
+  });
+  board.innerHTML=colsHtml;
+}
+
+function pipelineShowMore(status){
+  _pipelineShowCount[status] = (_pipelineShowCount[status]||5) + 5;
+  renderPipelineBoard();
+}
+function pipelineShowLess(status){
+  _pipelineShowCount[status] = 5;
+  renderPipelineBoard();
 }
 
 async function moveStatus(docId,ns){
@@ -1035,7 +1061,11 @@ async function saveAllA(){
   }
   showToast('⚡ A등급 '+saved+'건 일괄 저장 완료!');
   markDups();
-  setTimeout(function(){loadDashboard();},500);
+  setTimeout(function(){
+    loadDashboard();
+    if(document.getElementById('page-today').classList.contains('active')) loadToday();
+    if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
+  },500);
 }
 
 function markDups(){
@@ -1062,6 +1092,7 @@ async function doDelete(){
     showToast('🗑️ 삭제 완료');
     setTimeout(function(){
       loadDashboard();
+      if(document.getElementById('page-today').classList.contains('active')) loadToday();
       if(document.getElementById('page-leads').classList.contains('active')) loadLeads();
       if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
     },400);
@@ -1490,7 +1521,7 @@ function aggregateByCompany(items) {
   return result;
 }
 
-function finishFetch(btn) {
+async function finishFetch(btn) {
   var aCount  = searchLeads.filter(function(l){ return l.grade === 'A'; }).length;
   var bCount  = searchLeads.filter(function(l){ return l.grade === 'B'; }).length;
   var cCount  = searchLeads.filter(function(l){ return l.grade === 'C'; }).length;
@@ -1516,25 +1547,27 @@ function finishFetch(btn) {
   log('✅ 완료 | 업체 ' + searchLeads.length + '개사 | A:' + aCount + ' B:' + bCount + ' C:' + cCount + ' | 중복:' + dupCount);
   document.getElementById('lead-badge').textContent = searchLeads.length;
   if (aCount > 0) document.getElementById('save-all-btn').style.display = '';
-  // ─ 자동 DB 저장 → 오늘의 영업 TOP3 반영
-  autoSaveTop().then(function(n){
-    if (n > 0) {
-      log('💾 자동 저장 ' + n + '건 → 🎯 오늘의 영업에서 TOP 추천 확인!');
-      showToast('💾 상위 ' + n + '개사 자동 저장 완료');
-      fbGet().then(function(all){
-        savedLeads = all; _allLeads = all;
-        markDups();
-        var aL = all.filter(function(l){ return l.grade === 'A'; }).length;
-        document.getElementById('today-badge').textContent = Math.min(3, aL);
-      });
-    }
-  });
   renderSearch(searchLeads);
   document.getElementById('result-label').textContent =
     searchLeads.length + '개사 분석 | A등급 ' + aCount + '개사 | 중복 ' + dupCount + '건';
   btn.disabled = false; btn.textContent = '🚀 수집 시작';
   showToast('✅ ' + searchLeads.length + '개사 분석 완료 | A등급 ' + aCount + '개사');
   updateDashBanner(searchLeads);
+
+  // ─ 자동 DB 저장 완료를 기다린 뒤 → 모든 화면 실시간 갱신
+  var savedCount = await autoSaveTop();
+  if (savedCount > 0) {
+    log('💾 자동 저장 ' + savedCount + '건 → 대시보드·오늘의 영업 반영 완료');
+    showToast('💾 상위 ' + savedCount + '개사 자동 저장 완료');
+  }
+  var freshAll = await fbGet();
+  savedLeads = freshAll; _allLeads = freshAll;
+  markDups();
+  var freshA = freshAll.filter(function(l){ return l.grade === 'A'; }).length;
+  document.getElementById('today-badge').textContent = Math.min(3, freshA);
+
+  // 현재 열려있는 페이지에 맞춰 전체 다시 렌더링
+  if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
   if (document.getElementById('page-today').classList.contains('active')) loadToday();
   if (document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
 }
