@@ -469,13 +469,15 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
     <div class="settings-card"><h3>📋 내부 고객 CSV 업로드</h3><p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.7">사업자번호, 기업명, 등급보유여부(Y/N), 만료일</p><input type="file" id="csv-file" accept=".csv" style="font-size:12px;margin-bottom:10px;display:block;color:var(--text2)"><button class="btn btn-primary" onclick="uploadCSV()">📤 업로드</button><div id="csv-msg" style="margin-top:8px;font-size:12px;color:var(--success)"></div></div>
     <div style="background:linear-gradient(135deg,rgba(200,136,10,.08),rgba(26,111,232,.05));border:1.5px solid rgba(200,136,10,.25);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:14px">
       <h3 style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px">🏆 낙찰이력 DB 관리</h3>
-      <p style="font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:10px">낙찰이력은 매번 실시간으로 API를 호출하지 않고, <b>사전에 DB로 구축</b>해두고 검색할 때는 이 DB에서 즉시 조회합니다. 처음 한 번만 "최초 학습"으로 최근 15년치를 모아두고, 이후엔 "업데이트"로 그 이후 신규 낙찰분만 추가하면 됩니다.</p>
+      <p style="font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:10px">낙찰이력은 매번 실시간으로 API를 호출하지 않고, <b>사전에 DB로 구축</b>해두고 검색할 때는 이 DB에서 즉시 조회합니다. 처음 한 번만 "최초 학습"으로 최근 5년치를 모아두고, 이후엔 "업데이트"로 그 이후 신규 낙찰분만 추가하면 됩니다.</p>
       <div id="scsbid-status-card" style="margin-bottom:12px">조회 중...</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-gold" id="scsbid-init-btn" onclick="initScsbidHistory(15)">🔄 최초 학습 시작 (15년치)</button>
+        <button class="btn btn-gold" id="scsbid-init-btn" onclick="initScsbidHistory(5)">🔄 최초 학습 시작 (5년치)</button>
         <button class="btn btn-primary" id="scsbid-update-btn" onclick="updateScsbidHistory()">⚡ 최신 데이터만 업데이트</button>
+        <button class="btn btn-danger" onclick="resetScsbidDBPrompt()">🗑️ 낙찰DB 초기화</button>
       </div>
-      <p style="font-size:10.5px;color:var(--text3);margin-top:8px;line-height:1.6">⚠️ 최초 학습은 API를 30일 단위로 180번(15년×12) 호출하므로 <b>시간이 오래 걸립니다</b> (수십 분 소요 가능). 브라우저 탭을 닫지 말고 기다려주세요. 이후 업데이트는 신규분만 가져오므로 훨씬 빠릅니다.</p>
+      <div id="scsbid-reset-msg" style="margin-top:6px;font-size:12px"></div>
+      <p style="font-size:10.5px;color:var(--text3);margin-top:8px;line-height:1.6">⚠️ 최초 학습은 API를 30일 단위로 60번(5년×12) 호출하므로 <b>시간이 오래 걸립니다</b> (수십 분 소요 가능). 브라우저 탭을 닫지 말고 기다려주세요. 이후 업데이트는 신규분만 가져오므로 훨씬 빠릅니다.</p>
       <div class="log-box" id="scsbid-log-box" style="margin-top:10px;max-height:160px"></div>
     </div>
 
@@ -1258,6 +1260,34 @@ function resetAllDataPrompt(){
   document.getElementById('confirm-ok-btn').onclick = doResetAllData;
   document.getElementById('confirm-bg').classList.add('open');
 }
+function resetScsbidDBPrompt(){
+  document.getElementById('confirm-name').textContent = '낙찰이력 DB(사전구축된 업체 데이터)를 전부 삭제하고 진행상태도 초기화합니다. 이후 [최초 학습 시작]을 누르면 5년치를 처음부터 다시 수집합니다.';
+  document.getElementById('confirm-ok-btn').onclick = doResetScsbidDB;
+  document.getElementById('confirm-bg').classList.add('open');
+}
+async function doResetScsbidDB(){
+  closeConfirm();
+  var msg = document.getElementById('scsbid-reset-msg');
+  if (msg) { msg.textContent = '⏳ 낙찰DB 초기화 중...'; msg.style.color = 'var(--text3)'; }
+  try{
+    var snap = await db.collection('scsbidCompanies').get();
+    var batchSize = 400, docs = snap.docs, deleted = 0;
+    for (var i = 0; i < docs.length; i += batchSize) {
+      var batch = db.batch();
+      docs.slice(i, i+batchSize).forEach(function(d){ batch.delete(d.ref); });
+      await batch.commit();
+      deleted += Math.min(batchSize, docs.length - i);
+    }
+    await db.collection('scsbidMeta').doc('main').delete().catch(function(){});
+    await db.collection('scsbidMeta').doc('initProgress').delete().catch(function(){});
+    if (msg) { msg.textContent = '✅ ' + deleted + '개사 삭제 완료 — 진행상태도 초기화됨'; msg.style.color = 'var(--success)'; }
+    showToast('🗑️ 낙찰DB 초기화 완료 (' + deleted + '개사 삭제)');
+    loadScsbidMeta();
+  } catch(e){
+    if (msg) { msg.textContent = '❌ 오류: ' + e.message; msg.style.color = 'var(--danger)'; }
+  }
+}
+
 async function doResetAllData(){
   closeConfirm();
   var msg = document.getElementById('reset-msg');
@@ -1758,7 +1788,7 @@ function makeWindows(startDaysAgo, endDaysAgo) {
 
 // ─ 최초 학습: 10구간마다 증분 저장(delta merge) + 진행상태 기록 → 중단돼도 안전하게 이어서 진행
 async function initScsbidHistory(years) {
-  years = years || 15;
+  years = years || 5;
   _logTargetId = 'scsbid-log-box';
   var box = document.getElementById('scsbid-log-box'); if (box) box.textContent = '';
   var btn = document.getElementById('scsbid-init-btn'); if (btn) { btn.disabled = true; btn.textContent = '⏳ 학습 중...'; }
@@ -1831,7 +1861,7 @@ async function initScsbidHistory(years) {
     log('❌ 학습 중 오류 발생: ' + e.message + ' — 지금까지 진행분은 저장돼 있으니, 버튼을 다시 누르면 이어서 진행됩니다.');
     showToast('⚠️ 학습 중단됨 — 다시 누르면 이어서 진행됩니다');
   }
-  if (btn) { btn.disabled = false; btn.textContent = '🔄 최초 학습 시작 (15년치)'; }
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 최초 학습 시작 (5년치)'; }
   _logTargetId = 'log-box';
   loadScsbidMeta();
 }
@@ -1893,7 +1923,7 @@ async function loadScsbidMeta() {
       el.innerHTML = '<div style="font-size:12px;color:var(--warn);background:rgba(179,92,0,.08);border:1px solid rgba(179,92,0,.25);border-radius:8px;padding:10px 12px;line-height:1.7">⏸️ 이전 학습이 중단된 상태입니다 (' + (p.doneWindows||0) + '/' + (p.totalWindows||0) + '구간 완료). 지금까지 데이터는 안전하게 저장돼 있습니다. [최초 학습 시작]을 다시 누르면 <b>중단된 지점부터 이어서</b> 진행합니다.</div>';
       if (initBtn) initBtn.textContent = '▶️ 이어서 학습 진행';
     } else {
-      if (initBtn) initBtn.textContent = '🔄 최초 학습 시작 (15년치)';
+      if (initBtn) initBtn.textContent = '🔄 최초 학습 시작 (5년치)';
     }
 
     var snap = await db.collection('scsbidMeta').doc('main').get();
