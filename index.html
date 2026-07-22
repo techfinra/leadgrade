@@ -1739,17 +1739,26 @@ async function scsbidSaveMapToFirestore(map, isFullRebuild) {
 // ─ 기존 Firestore 문서에 델타(map)를 "더해서" 반영 (덮어쓰기 아님 — 중단·재개해도 정확)
 async function scsbidMergeIncremental(deltaMap) {
   var keys = Object.keys(deltaMap);
-  var chunkSize = 20; // 읽기+쓰기라 청크 작게
+  var chunkSize = 400; // 읽기를 병렬화하므로 청크를 키워도 빠름
   for (var i = 0; i < keys.length; i += chunkSize) {
     var slice = keys.slice(i, i+chunkSize);
-    var batch = db.batch();
-    for (var j = 0; j < slice.length; j++) {
-      var k = slice[j];
+    // ① 이 청크의 기존 문서를 한꺼번에 병렬로 조회 (순차 조회 대비 수십 배 빠름)
+    var refs = slice.map(function(k){
       var d = deltaMap[k];
       var docId = (d.bizno || d.nm || k).replace(/[\/#\[\]]/g,'_').slice(0,300);
-      var ref = db.collection('scsbidCompanies').doc(docId);
-      var existing = null;
-      try { var snap = await ref.get(); if (snap.exists) existing = snap.data(); } catch(e){}
+      return { key: k, docId: docId, ref: db.collection('scsbidCompanies').doc(docId) };
+    });
+    var snaps = await Promise.all(refs.map(function(r){
+      return r.ref.get().catch(function(){ return null; });
+    }));
+    // ② 병렬로 받은 결과 기반으로 batch 조립 (여기부터는 로컬 연산이라 빠름)
+    var batch = db.batch();
+    for (var j = 0; j < refs.length; j++) {
+      var k = refs[j].key;
+      var d = deltaMap[k];
+      var ref = refs[j].ref;
+      var snap = snaps[j];
+      var existing = (snap && snap.exists) ? snap.data() : null;
       if (existing) {
         var mergedOrgs = new Set(existing.orgs||[]); (Array.from(d.orgs||[])).forEach(function(o){mergedOrgs.add(o);});
         var mergedNames = (existing.bidNames||[]).concat(d.bidNames||[]).slice(0,30);
@@ -1771,6 +1780,7 @@ async function scsbidMergeIncremental(deltaMap) {
         });
       }
     }
+    // ③ Firestore batch 최대 500건 제한 → 400단위라 그대로 커밋 가능
     await batch.commit();
   }
 }
