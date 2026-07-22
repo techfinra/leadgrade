@@ -1011,7 +1011,7 @@ function salesPoint(l){
 async function loadToday(){
   try{
     var all=await fbGet(); savedLeads=all; _allLeads=all;
-    var top=all.filter(function(l){return l.grade==='A';}).slice(0,3);
+    var top=all.filter(function(l){return l.grade==='A';}).sort(function(a,b){return b.score-a.score;}).slice(0,3);
     document.getElementById('today-badge').textContent=top.length;
     var fu=all.filter(isFollowup);
     var brief=document.getElementById('today-brief');
