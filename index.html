@@ -158,6 +158,13 @@ main{margin-left:240px;flex:1;padding:30px 34px;position:relative;z-index:1}
 
 /* LOG */
 .log-box{background:#0D1B3E;color:#00CC6E;font-size:11.5px;font-family:'Courier New',monospace;padding:13px 16px;border-radius:var(--radius-lg);max-height:110px;overflow-y:auto;margin-bottom:14px;line-height:2;border:1.5px solid rgba(26,111,232,.2)}
+.sum-card{background:linear-gradient(135deg,rgba(26,111,232,.06),rgba(240,185,59,.05));border:1.5px solid rgba(26,111,232,.18);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sum-item{display:flex;align-items:center;gap:10px}
+.sum-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.sum-txt-lbl{font-size:10px;color:var(--text3);font-weight:700}
+.sum-txt-val{font-size:14px;font-weight:900;color:var(--text);margin-top:1px}
+.sum-txt-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.sum-foot{grid-column:1/-1;border-top:1px solid rgba(26,111,232,.15);padding-top:10px;margin-top:2px;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
 
 /* TABLE */
 .tbl-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow)}
@@ -418,6 +425,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
     <button class="btn btn-gold" id="save-all-btn" onclick="saveAllA()" style="display:none">⚡ A등급 일괄 저장</button>
   </div>
   <div class="log-box" id="log-box">> 데이터소스를 선택하고 [수집 시작]을 클릭하세요.</div>
+  <div id="collect-summary-card" style="display:none"></div>
   <div class="sec">분석 결과 <span id="result-label" style="font-size:11px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:600"></span></div>
   <div class="tbl-wrap"><table>
     <thead><tr><th>등급</th><th>업체명 / 발주기관</th><th>유형</th><th>점수</th><th>연락시점</th><th>분야</th><th>낙찰/계약금액</th><th>저장</th></tr></thead>
@@ -1167,6 +1175,7 @@ async function fetchLeads() {
 
   btn.disabled = true; btn.textContent = '⏳ 수집중...';
   document.getElementById('log-box').textContent = '';
+  document.getElementById('collect-summary-card').style.display = 'none';
   document.getElementById('save-all-btn').style.display = 'none';
 
   var today   = dateStr(0);
@@ -1234,7 +1243,7 @@ async function fetchLeads() {
     return 'ServiceKey=' + API_KEY +
       '&pageNo=' + pg + '&numOfRows=' + API_MAX + '&type=json' +
       '&inqryDiv=1' +
-      '&inqryBgnDt=' + dateStr(-30) + '0000' +
+      '&inqryBgnDt=' + dateStr(-parseInt(dayRange)) + '0000' +
       '&inqryEndDt=' + today  + '2359' +
       (keyword ? '&bidNtceNm=' + encodeURIComponent(keyword) : '');
   }
@@ -1500,11 +1509,33 @@ async function fetchLeads() {
   if (!isAll) resultItems = resultItems.slice(0, perPage);
 
   log('✅ 크로스매칭 완료 | ' + resultItems.length + '개사');
+
+  // ─ 수집 요약 카드 데이터 저장 (finishFetch에서 렌더링)
+  window._collectSummary = {
+    bidDays: dayRange,
+    bidCount: bidItems.length,
+    scsbidYears: 3,
+    scsbidCount: scsbidItems.length,
+    scsbidCompanies: compKeys.length,
+    matchedCount: resultItems.length
+  };
   searchLeads = resultItems;
   markDupCheck();
   finishFetch(btn);
 }
 
+
+function renderCollectSummary(aCount, bCount, cCount, dupCount) {
+  var card = document.getElementById('collect-summary-card');
+  if (window._isMock) { card.style.display = 'none'; return; }
+  var s = window._collectSummary || {};
+  card.style.display = 'grid';
+  card.className = 'sum-card';
+  card.innerHTML =
+    '<div class="sum-item"><div class="sum-ico" style="background:rgba(26,111,232,.12);color:var(--blue)">📋</div><div><div class="sum-txt-lbl">입찰공고 조회</div><div class="sum-txt-val">최근 ' + (s.bidDays||'-') + '일치</div><div class="sum-txt-sub">마감 안 지난 공고 ' + (s.bidCount||0) + '건 확인</div></div></div>' +
+    '<div class="sum-item"><div class="sum-ico" style="background:rgba(200,136,10,.12);color:var(--gold)">🏆</div><div><div class="sum-txt-lbl">낙찰이력 조회</div><div class="sum-txt-val">최근 ' + (s.scsbidYears||3) + '년치</div><div class="sum-txt-sub">낙찰 ' + (s.scsbidCount||0) + '건 · ' + (s.scsbidCompanies||0) + '개사 확인</div></div></div>' +
+    '<div class="sum-foot"><span style="font-size:14px">🔗</span>두 데이터를 교차분석해 <b style="color:var(--blue)">' + (s.matchedCount||0) + '개사</b>를 추천했어요 (A ' + aCount + ' · B ' + bCount + ' · C ' + cCount + (dupCount>0?' · 중복제외 '+dupCount:'') + ')</div>';
+}
 
 function fetchBid() { fetchLeads(); }
 
@@ -1588,6 +1619,7 @@ async function finishFetch(btn) {
   btn.disabled = false; btn.textContent = '🚀 수집 시작';
   showToast('✅ ' + searchLeads.length + '개사 분석 완료 | A등급 ' + aCount + '개사');
   updateDashBanner(searchLeads);
+  renderCollectSummary(aCount, bCount, cCount, dupCount);
 
   // ─ 자동 DB 저장 완료를 기다린 뒤 → 모든 화면 실시간 갱신
   var savedCount = await autoSaveTop();
