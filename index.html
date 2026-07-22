@@ -1739,18 +1739,29 @@ async function scsbidSaveMapToFirestore(map, isFullRebuild) {
 // ─ 기존 Firestore 문서에 델타(map)를 "더해서" 반영 (덮어쓰기 아님 — 중단·재개해도 정확)
 async function scsbidMergeIncremental(deltaMap) {
   var keys = Object.keys(deltaMap);
-  var chunkSize = 400; // 읽기를 병렬화하므로 청크를 키워도 빠름
+  var chunkSize = 200; // 읽기를 병렬화하되 과도한 동시요청은 피함
+  var totalChunks = Math.ceil(keys.length / chunkSize);
+  log('  📦 ' + keys.length + '개사를 ' + totalChunks + '개 청크로 나눠 병합 시작...');
   for (var i = 0; i < keys.length; i += chunkSize) {
+    var chunkNo = Math.floor(i/chunkSize) + 1;
     var slice = keys.slice(i, i+chunkSize);
+    log('  🔹 청크 ' + chunkNo + '/' + totalChunks + ' 조회 중... (' + slice.length + '개사)');
     // ① 이 청크의 기존 문서를 한꺼번에 병렬로 조회 (순차 조회 대비 수십 배 빠름)
     var refs = slice.map(function(k){
       var d = deltaMap[k];
       var docId = (d.bizno || d.nm || k).replace(/[\/#\[\]]/g,'_').slice(0,300);
       return { key: k, docId: docId, ref: db.collection('scsbidCompanies').doc(docId) };
     });
-    var snaps = await Promise.all(refs.map(function(r){
-      return r.ref.get().catch(function(){ return null; });
-    }));
+    var snaps;
+    try {
+      snaps = await Promise.race([
+        Promise.all(refs.map(function(r){ return r.ref.get().catch(function(){ return null; }); })),
+        new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('청크 조회 타임아웃(30초)')); }, 30000); })
+      ]);
+    } catch(e) {
+      log('  ⚠️ 청크 ' + chunkNo + ' 조회 실패(' + e.message + ') — 신규 데이터로만 처리');
+      snaps = refs.map(function(){ return null; });
+    }
     // ② 병렬로 받은 결과 기반으로 batch 조립 (여기부터는 로컬 연산이라 빠름)
     var batch = db.batch();
     for (var j = 0; j < refs.length; j++) {
@@ -1780,9 +1791,11 @@ async function scsbidMergeIncremental(deltaMap) {
         });
       }
     }
-    // ③ Firestore batch 최대 500건 제한 → 400단위라 그대로 커밋 가능
+    // ③ Firestore batch 최대 500건 제한 → 200단위라 그대로 커밋 가능
     await batch.commit();
+    log('  ✔️ 청크 ' + chunkNo + '/' + totalChunks + ' 저장 완료');
   }
+  log('  📦 전체 ' + totalChunks + '개 청크 병합 완료');
 }
 
 function makeWindows(startDaysAgo, endDaysAgo) {
