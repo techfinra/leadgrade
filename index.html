@@ -1047,6 +1047,7 @@ async function loadToday(){
         cards+='<div class="podium-rank">'+(i+1)+'</div>';
         cards+='<div class="podium-name">'+escH(l.name||'')+'</div>';
         cards+='<div class="podium-org">🏢 '+escH((l.org||'—').slice(0,26))+' · '+(l.field||'—')+'</div>';
+        cards+='<div style="margin-bottom:6px">'+ownerBadge(l.owner)+'</div>';
         cards+='<div class="podium-score-row"><div class="podium-score">'+l.score+'<small>점</small></div>'+gb(l.grade)+tb(l.type)+'</div>';
         cards+='<div class="podium-reasons">';
         rsn.forEach(function(r){cards+='<div class="podium-reason"><span class="ico">✓</span><span>'+escH(r.slice(0,34))+'</span></div>';});
