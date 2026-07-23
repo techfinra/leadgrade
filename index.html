@@ -1077,10 +1077,20 @@ async function loadToday(){
   } catch(e){console.error(e);}
 }
 
+function refreshLocalAndPanel(docId, patch){
+  savedLeads.forEach(function(l){ if(l._id===docId) Object.assign(l, patch); });
+  _allLeads.forEach(function(l){ if(l._id===docId) Object.assign(l, patch); });
+  if(_curPanel && _curPanel.docId === docId){
+    if(_curPanel.src==='saved') openPanelSaved(_curPanel.i);
+    else openPanelSearch(_curPanel.i);
+  }
+}
+
 async function quickStatus(docId,status){
   try{
     await db.collection('leads').doc(docId).update({status:status,statusUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     showToast('✅ 상태: '+status);
+    refreshLocalAndPanel(docId, {status: status});
     loadDashboard();
     if(document.getElementById('page-today').classList.contains('active')) loadToday();
     if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
@@ -1152,7 +1162,7 @@ function pipelineShowLess(status){
 }
 
 async function moveStatus(docId,ns){
-  try{await db.collection('leads').doc(docId).update({status:ns,statusUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('📋 → '+ns);loadPipeline();}
+  try{await db.collection('leads').doc(docId).update({status:ns,statusUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('📋 → '+ns);refreshLocalAndPanel(docId,{status:ns});loadPipeline();}
   catch(e){showToast('❌ '+e.message);}
 }
 
@@ -2717,6 +2727,11 @@ async function assignOwner(docId, ownerName){
     if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
     if(document.getElementById('page-leads').classList.contains('active')) loadLeads();
     if(document.getElementById('page-owner').classList.contains('active')) renderOwnerAssignList(savedLeads);
+    // 지금 열려있는 상세 패널이 방금 배정한 업체와 같으면 즉시 다시 그려서 실시간 반영
+    if(_curPanel && _curPanel.docId === docId){
+      if(_curPanel.src==='saved') openPanelSaved(_curPanel.i);
+      else openPanelSearch(_curPanel.i);
+    }
   }catch(e){
     showToast('❌ 배정 실패: ' + e.message);
   }
@@ -2797,11 +2812,14 @@ function appendSearchRows(n) {
 
 
 // ═══ 패널 열기 (클로저 없이 인덱스 기반) ═══
+var _curPanel = null; // { src, i, docId } — 현재 열려있는 상세 패널 추적 (실시간 갱신용)
+
 function openPanelSearch(i){openPanel(searchLeads[i],'search',i);}
 function openPanelSaved(i){openPanel(savedLeads[i],'saved',i);}
 
 function openPanel(l,src,i){
   if(!l) return;
+  _curPanel = { src: src, i: i, docId: l._id || null };
   var gcClass='gc-'+(l.grade||'A');
   var html='<div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">영업 상세 카드</div>';
   html+='<div class="grade-hero"><div class="grade-circle '+gcClass+'"><div style="font-size:20px">'+l.grade+'</div><div style="font-size:10px">'+l.score+'점</div></div>';
@@ -2881,9 +2899,9 @@ function openPanel(l,src,i){
   document.getElementById('panel').classList.add('open');
 }
 
-function closePanel(){document.getElementById('panel').classList.remove('open');}
+function closePanel(){document.getElementById('panel').classList.remove('open');_curPanel=null;}
 function switchTab(btn,id){document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');['tc','ts','te'].forEach(function(x){document.getElementById(x).style.display=x===id?'block':'none';});}
-async function saveMemo(docId){var m=document.getElementById('memo-area').value;try{await db.collection('leads').doc(docId).update({memo:m,memoAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('📝 메모 저장');}catch(e){showToast('❌ '+e.message);}}
+async function saveMemo(docId){var m=document.getElementById('memo-area').value;try{await db.collection('leads').doc(docId).update({memo:m,memoAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('📝 메모 저장');refreshLocalAndPanel(docId,{memo:m});}catch(e){showToast('❌ '+e.message);}}
 
 function buildSBD(l){
   var bd=l.breakdown||{};
