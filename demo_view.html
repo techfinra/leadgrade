@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>상세보기 (시연용 예시)</title>
+<style>
+:root{--navy:#0D1F4E;--gold:#C8A84B;--bg:#F4F6FA;--text:#1A2540;--text3:#8B94A8;--border:#E4E8F0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Malgun Gothic',sans-serif;background:var(--bg);color:var(--text);padding:0}
+.banner{background:linear-gradient(135deg,var(--navy),#1a3570);color:#fff;padding:14px 20px;text-align:center;font-size:13px;font-weight:700;letter-spacing:.3px}
+.banner b{color:var(--gold)}
+.wrap{max-width:640px;margin:0 auto;padding:24px 20px}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(13,31,78,.06)}
+.tag{display:inline-block;background:rgba(200,168,75,.15);color:#a5822f;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:14px}
+.tag.scsbid{background:rgba(13,31,78,.08);color:var(--navy)}
+h1{font-size:19px;font-weight:800;line-height:1.5;margin-bottom:6px}
+.sub{font-size:12.5px;color:var(--text3);margin-bottom:22px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.item{background:var(--bg);border-radius:10px;padding:12px 14px}
+.item .lbl{font-size:10.5px;color:var(--text3);font-weight:700;margin-bottom:4px}
+.item .val{font-size:14px;font-weight:800;color:var(--text)}
+.item.wide{grid-column:1/-1}
+.footer-note{margin-top:22px;padding:14px 16px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:10px;font-size:12px;color:#7a6423;line-height:1.7}
+.gback{display:inline-block;margin-top:18px;color:var(--navy);font-size:13px;font-weight:700;text-decoration:none}
+</style></head>
+<body>
+<div class="banner">🎬 <b>시연용 예시 화면</b>입니다 — 실제 나라장터 데이터가 아닙니다</div>
+<div class="wrap"><div class="card" id="card">로딩 중...</div></div>
+<script>
+function qp(k){ return new URLSearchParams(location.search).get(k) || ''; }
+function fmtAmt(n){
+  n = parseInt(n)||0;
+  if (n >= 1e8) return (n/1e8).toFixed(1) + '억원';
+  if (n >= 1e4) return Math.round(n/1e4) + '만원';
+  return n.toLocaleString() + '원';
+}
+var type = qp('type');
+var name = qp('name'), org = qp('org'), bidnm = qp('bidnm'), amt = qp('amt'),
+    date = qp('date'), bizno = qp('bizno'), method = qp('method'), bidcount = qp('bidcount');
+
+var html = '';
+if (type === 'scsbid') {
+  html += '<span class="tag scsbid">🏆 낙찰정보 조회결과</span>';
+  html += '<h1>' + (name || '업체명') + '</h1>';
+  html += '<div class="sub">나라장터 낙찰정보서비스 · 최근 5년 낙찰이력 기준</div>';
+  html += '<div class="grid">';
+  html += '<div class="item"><div class="lbl">사업자등록번호</div><div class="val">' + (bizno||'-') + '</div></div>';
+  html += '<div class="item"><div class="lbl">최근 낙찰일</div><div class="val">' + (date||'-') + '</div></div>';
+  html += '<div class="item"><div class="lbl">최근 낙찰금액</div><div class="val">' + fmtAmt(amt) + '</div></div>';
+  html += '<div class="item"><div class="lbl">최근 5년 낙찰횟수</div><div class="val">' + (bidcount||'-') + '회</div></div>';
+  html += '<div class="item wide"><div class="lbl">주요 수요기관</div><div class="val">' + (org||'-') + '</div></div>';
+  html += '<div class="item wide"><div class="lbl">최근 낙찰방법</div><div class="val">' + (method||'-') + '</div></div>';
+  html += '</div>';
+} else {
+  html += '<span class="tag">📋 입찰공고 상세</span>';
+  html += '<h1>' + (bidnm || '공고명') + '</h1>';
+  html += '<div class="sub">나라장터 입찰공고정보서비스</div>';
+  html += '<div class="grid">';
+  html += '<div class="item wide"><div class="lbl">수요기관</div><div class="val">' + (org||'-') + '</div></div>';
+  html += '<div class="item"><div class="lbl">입찰마감일</div><div class="val">' + (date||'-') + '</div></div>';
+  html += '<div class="item"><div class="lbl">낙찰(입찰)방법</div><div class="val">' + (method||'-') + '</div></div>';
+  html += '<div class="item wide"><div class="lbl">추정 사업규모</div><div class="val">' + fmtAmt(amt) + '</div></div>';
+  html += '</div>';
+}
+html += '<div class="footer-note">📌 이 화면은 LeadGrade AI 시연을 위한 예시 화면이며, 실제 나라장터 데이터와 무관합니다. 실제 서비스에서는 이 버튼이 나라장터 원문 페이지로 연결됩니다.</div>';
+html += '<a class="gback" href="javascript:history.back()">← 뒤로가기</a>';
+
+document.getElementById('card').innerHTML = html;
+</script>
+</body></html>
