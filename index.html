@@ -2598,6 +2598,18 @@ function renderSearch(list) {
   appendSearchRows(RENDER_BATCH);
   var wrap = document.querySelector('#page-search .tbl-wrap');
   if (wrap) { wrap.onscroll = null; wrap.onscroll = function(){ if(wrap.scrollTop+wrap.clientHeight>=wrap.scrollHeight-200) appendSearchRows(RENDER_BATCH); }; }
+  // ─ 이벤트 위임: tbody 자체에 한 번만 리스너를 걸어서, 행이 몇 번을 다시 그려져도 항상 확실히 작동
+  if (!tbody._delegated) {
+    tbody._delegated = true;
+    tbody.addEventListener('click', function(e){
+      var saveBtn = e.target.closest('[data-save-idx]');
+      if (saveBtn) { e.stopPropagation(); saveLead(parseInt(saveBtn.getAttribute('data-save-idx'))); return; }
+      var scoreEl = e.target.closest('[data-score-idx]');
+      if (scoreEl) { e.stopPropagation(); openScoreModal(parseInt(scoreEl.getAttribute('data-score-idx')), 0); return; }
+      var rowEl = e.target.closest('tr[data-i]');
+      if (rowEl) { openPanelSearch(parseInt(rowEl.getAttribute('data-i'))); }
+    });
+  }
 }
 
 function appendSearchRows(n) {
@@ -2610,7 +2622,7 @@ function appendSearchRows(n) {
     var tr = document.createElement('tr');
     tr.style.opacity = l.isDup ? '.6' : '1';
     tr.setAttribute('data-i', i);
-    tr.onclick = function(){ openPanelSearch(parseInt(this.getAttribute('data-i'))); };
+    // 개별 onclick 부착 대신 data-* 속성만 심고, 클릭 처리는 renderSearch의 위임 리스너가 전담 (더 견고함)
     var linkRow = '';
     if (l.detailUrl) linkRow += '<a href="'+l.detailUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:9px;color:var(--blue);margin-right:8px;text-decoration:none">📋 공고검색 ↗</a>';
     if (l.scsbidSearchUrl) linkRow += '<a href="'+l.scsbidSearchUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:9px;color:var(--gold);text-decoration:none">🏆 낙찰검색 ↗</a>';
@@ -2622,17 +2634,11 @@ function appendSearchRows(n) {
       '<td>' + gradeCol(l.grade, l.score) + '</td>' +
       '<td>' + nameCell + '</td>' +
       '<td>' + tb(l.type) + '</td>' +
-      '<td>' + sb(l.score) + '</td>' +
+      '<td data-score-idx="'+i+'" style="cursor:pointer">' + sb(l.score) + '</td>' +
       '<td>' + tc(l.timingClass) + '</td>' +
       '<td style="font-size:11px;color:var(--text3)">' + (l.field||'기타') + '</td>' +
       '<td style="font-weight:700;color:var(--text)">' + fa(l.amount) + '</td>' +
-      '<td>' + (l.isDup ? '<span class="dup-badge">✓ 저장됨</span>' : '<button class="btn btn-gold btn-sm">💾 저장</button>') + '</td>';
-    if (!l.isDup) {
-      var sb2 = tr.querySelector('button');
-      if (sb2) { (function(idx){ sb2.onclick = function(e){ e.stopPropagation(); saveLead(idx); }; })(i); }
-    }
-    var scoreTd = tr.querySelectorAll('td')[3];
-    if (scoreTd) { (function(idx){ scoreTd.onclick = function(e){ e.stopPropagation(); openScoreModal(idx, 0); }; })(i); }
+      '<td>' + (l.isDup ? '<span class="dup-badge">✓ 저장됨</span>' : '<button type="button" class="btn btn-gold btn-sm" data-save-idx="'+i+'">💾 저장</button>') + '</td>';
     frag.appendChild(tr);
   }
   tbody.appendChild(frag);
