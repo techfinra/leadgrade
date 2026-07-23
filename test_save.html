@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>저장 진단</title></head>
+<body style="font-family:monospace;padding:24px;background:#111;color:#0f0;font-size:14px">
+<h2 style="color:#fff">Firestore 저장 진단 (앱 코드와 완전 분리된 테스트)</h2>
+<button id="btn" style="padding:12px 24px;font-size:15px;background:#C8A84B;border:none;border-radius:8px;font-weight:800;cursor:pointer">🧪 지금 바로 테스트</button>
+<div id="log" style="margin-top:20px;line-height:2"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:           "AIzaSyBcpPb1REiD0OPzEbJZDdrZNx4rfLHk84A",
+  authDomain:       "powerfull-fe4c1.firebaseapp.com",
+  projectId:        "powerfull-fe4c1",
+  storageBucket:    "powerfull-fe4c1.firebasestorage.app",
+  messagingSenderId:"88203935558",
+  appId:            "1:88203935558:web:5dbdff7920488f23e7af47"
+});
+var db = firebase.firestore();
+
+function log(msg, color) {
+  var d = document.createElement('div');
+  d.style.color = color || '#0f0';
+  d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  document.getElementById('log').appendChild(d);
+}
+
+document.getElementById('btn').onclick = async function() {
+  this.disabled = true;
+  log('① leads 컬렉션 현재 문서 수 확인 중...');
+  try {
+    var before = await db.collection('leads').get();
+    log('  → 저장 전 문서 수: ' + before.size, '#0ff');
+  } catch(e) {
+    log('  ❌ 조회 실패: [' + (e.code||'?') + '] ' + e.message, '#f44');
+    log('  → Firestore 규칙 또는 프로젝트 접근 문제일 가능성이 높습니다.', '#fa0');
+    this.disabled = false;
+    return;
+  }
+
+  log('② 테스트 문서 저장 시도 중...');
+  var testId = 'DIAGTEST_' + Date.now();
+  try {
+    var ref = await db.collection('leads').add({
+      name: '진단테스트업체', id: testId, grade: 'A', score: 88,
+      status: '연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    log('  ✅ 저장 성공! 생성된 문서ID: ' + ref.id, '#0f0');
+  } catch(e) {
+    log('  ❌ 저장 실패: [' + (e.code||'?') + '] ' + e.message, '#f44');
+    if (e.code === 'permission-denied') log('  → Firestore 보안규칙이 쓰기를 막고 있습니다!', '#fa0');
+    this.disabled = false;
+    return;
+  }
+
+  log('③ 저장 직후 다시 조회해서 실제로 들어갔는지 확인...');
+  try {
+    var after = await db.collection('leads').get();
+    log('  → 저장 후 문서 수: ' + after.size + ' (증가분: ' + (after.size - before.size) + ')', '#0ff');
+    var found = after.docs.find(function(d){ return d.data().id === testId; });
+    log(found ? '  ✅ 방금 저장한 문서가 실제로 존재합니다!' : '  ❌ 저장했다는 응답은 왔는데 실제로 조회가 안 됩니다 (이상 상황)', found?'#0f0':'#f44');
+  } catch(e) {
+    log('  ❌ 재조회 실패: ' + e.message, '#f44');
+  }
+
+  log('');
+  log('④ 이제 브라우저를 새로고침(F5) 한 뒤 이 페이지를 다시 열어서', '#fa0');
+  log('   "🧪 지금 바로 테스트"를 다시 눌러 ①번 문서 수가 유지되는지 확인하세요.', '#fa0');
+  this.disabled = false;
+};
+</script>
+</body></html>
