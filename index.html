@@ -2373,13 +2373,8 @@ async function finishFetch(btn) {
   updateDashBanner(searchLeads);
   renderCollectSummary(aCount, bCount, cCount, dupCount);
 
-  // ─ 자동 DB 저장 완료를 기다린 뒤 → 모든 화면 실시간 갱신
-  var savedCount = await autoSaveTop();
-  if (savedCount > 0) {
-    log('💾 점수 상위 ' + savedCount + '건 자동 저장 → 대시보드·오늘의 영업 반영 완료');
-    log('ℹ️ 나머지 업체는 개별 클릭 후 [💾 저장] 버튼으로 수동 저장하세요');
-    showToast('💾 점수 상위 ' + savedCount + '개사 자동 저장 완료');
-  }
+  // ─ 시연 모드: 자동저장은 끄고, [저장]/[일괄 A저장] 버튼을 직접 눌러 시연하도록 함
+  log('ℹ️ 업체 클릭 후 [💾 저장], 또는 상단 [⚡ A등급 일괄 저장] 버튼으로 저장해보세요');
   var freshAll = await fbGet();
   savedLeads = freshAll; _allLeads = freshAll;
   markDups();
