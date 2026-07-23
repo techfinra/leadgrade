@@ -339,6 +339,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <div class="sb-label">Intelligence</div>
   <button class="nav active" onclick="showPage(&apos;dashboard&apos;,this)"><span class="nav-icon">📊</span>대시보드</button>
   <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
+  <button class="nav" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">👤</span>담당자 배정</button>
   <button class="nav" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
   <button class="nav" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
   <div class="sb-label">System</div>
@@ -380,11 +381,23 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <div class="sec">🎯 오늘의 영업 리스트</div>
   <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">🤖 AI 추천</span><div id="today-brief">분석 중...</div><div style="font-size:10px;color:var(--text3);margin-top:6px">AI가 추천한 오늘의 우선 영업 고객 리스트 — 검색 시 자동 갱신</div></div>
   <div class="top3-grid" id="top3-grid"><div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner"></div></div></div>
+
+
   <div class="sec" style="margin-top:8px">팔로업 필요 <span style="font-size:10px;color:var(--danger);text-transform:none;letter-spacing:0;font-weight:700">(3일 이상 미연락)</span></div>
   <div class="tbl-wrap"><table>
     <thead><tr><th>등급</th><th>공고명</th><th>상태</th><th>점수</th><th>연락시점</th><th>미연락일수</th><th>액션</th></tr></thead>
     <tbody id="followup-tbody"><tr><td colspan="7"><div class="empty"><span class="ei">✅</span><div>팔로업 필요 기업 없음</div></div></td></tr></tbody>
   </table></div>
+</div>
+
+<!-- 담당자 배정 -->
+<div class="page" id="page-owner">
+  <div class="sec">👤 담당자 배정</div>
+  <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">📋 배정 관리</span>저장된 전체 기업을 담당자(전힘찬 차장 · 박경민 과장)에게 배정하세요. 배정 즉시 대시보드·오늘의영업·파이프라인·영업리스트에 반영됩니다.</div>
+  <div class="sec" style="margin-top:0">전체 기업 <span id="owner-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
+  <div id="owner-assign-list" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:8px">
+    <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
+  </div>
 </div>
 
 <!-- 잠재고객 발굴 -->
@@ -865,6 +878,7 @@ function showPage(id,btn){
   else if(id==='leads') loadLeads();
   else if(id==='pipeline') loadPipeline();
   else if(id==='today') loadToday();
+  else if(id==='owner') loadOwnerAssignPage();
   else if(id==='settings') loadScsbidMeta();
   else if(id==='search') loadScsbidMiniStatus();
 }
@@ -1038,7 +1052,6 @@ async function loadToday(){
         rsn.forEach(function(r){cards+='<div class="podium-reason"><span class="ico">✓</span><span>'+escH(r.slice(0,34))+'</span></div>';});
         cards+='</div>';
         cards+='<div class="podium-point"><div class="podium-point-lbl">추천 영업 포인트</div><div class="podium-point-val">'+salesPoint(l)+'</div></div>';
-        cards+='<div class="podium-owner-row" onclick="event.stopPropagation()">'+ownerAssignRow(l._id, l.owner)+'</div>';
         cards+='<div style="display:flex;gap:6px">';
         cards+='<button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();openPanelSaved('+idx+')">상세</button>';
         cards+='<button class="btn btn-success btn-sm" style="flex:1" data-id="'+l._id+'" onclick="event.stopPropagation();qsReach(this)">📞 연락</button>';
@@ -2644,6 +2657,47 @@ function ownerAssignRow(docId, currentOwner){
   return html;
 }
 
+async function loadOwnerAssignPage(){
+  try {
+    var all = await fbGet();
+    savedLeads = all; _allLeads = all;
+    var badge = document.getElementById('owner-total-badge');
+    if (badge) badge.textContent = all.length + '개사';
+    renderOwnerAssignList(all);
+  } catch(e) {
+    var el = document.getElementById('owner-assign-list');
+    if (el) el.innerHTML = errHtml(e);
+  }
+}
+
+function renderOwnerAssignList(all){
+  var el = document.getElementById('owner-assign-list');
+  if (!el) return;
+  if (!all.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">📭</span><div>저장된 기업이 없습니다</div></div>';
+    return;
+  }
+  var list = all.slice().sort(function(a,b){ return (b.score||0)-(a.score||0); });
+  var html = '';
+  list.forEach(function(l){
+    html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)">';
+    html += '<div style="flex-shrink:0">'+gb(l.grade)+'</div>';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(l.name||'')+'</div>';
+    html += '<div style="font-size:10.5px;color:var(--text3)">🏢 '+escH((l.org||'—').slice(0,30))+' · '+l.score+'점</div>';
+    html += '</div>';
+    html += '<div style="flex-shrink:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">';
+    html += ownerBadge(l.owner);
+    OWNER_LIST.forEach(function(o){
+      var isCur = (o === l.owner);
+      html += '<button class="btn btn-sec btn-xs" style="'+(isCur?'opacity:.35;pointer-events:none;':'')+'" data-owner-doc="'+l._id+'" data-owner-name="'+o+'" onclick="assignOwnerClick(this)">'+o.split(' ')[0]+'</button>';
+    });
+    if (l.owner) html += '<button class="btn btn-sec btn-xs" data-owner-doc="'+l._id+'" data-owner-name="" onclick="assignOwnerClick(this)" style="color:var(--danger)">해제</button>';
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
 function assignOwnerClick(btn){
   var docId = btn.getAttribute('data-owner-doc');
   var name  = btn.getAttribute('data-owner-name');
@@ -2662,6 +2716,7 @@ async function assignOwner(docId, ownerName){
     if(document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
     if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
     if(document.getElementById('page-leads').classList.contains('active')) loadLeads();
+    if(document.getElementById('page-owner').classList.contains('active')) renderOwnerAssignList(savedLeads);
   }catch(e){
     showToast('❌ 배정 실패: ' + e.message);
   }
