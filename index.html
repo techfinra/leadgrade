@@ -1187,16 +1187,25 @@ function sortLeads(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}filt
 
 // ═══ 저장 ═══
 async function saveLead(i){
-  var l=Object.assign({},searchLeads[i]); delete l.raw;
-  var dup=savedLeads.find(function(s){return s.id===l.id;});
-  if(dup){showToast('⚠️ 이미 저장된 기업입니다');return;}
-  try{
-    await db.collection('leads').add(Object.assign({},l,{status:'연락전',savedAt:firebase.firestore.FieldValue.serverTimestamp()}));
-    showToast('💾 저장: '+(l.name||'').slice(0,18)+'…');
+  showToast('⏳ 저장 시도 중...');
+  var src = searchLeads[i];
+  if (!src) { showToast('❌ 저장 실패: 대상 데이터를 찾을 수 없습니다(index='+i+')'); console.error('saveLead: searchLeads['+i+'] undefined'); return; }
+  var l = Object.assign({}, src); delete l.raw;
+  try {
+    var dupSnap = await db.collection('leads').where('id','==',l.id||'').limit(1).get().catch(function(){ return null; });
+    if (dupSnap && !dupSnap.empty) { showToast('⚠️ 이미 저장된 기업입니다'); return; }
+    var docRef = await db.collection('leads').add(Object.assign({}, l, {status:'연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()}));
+    showToast('✅ 저장 완료: ' + (l.name||'').slice(0,18) + ' (id:' + docRef.id.slice(0,6) + ')');
     closePanel();
+    var freshAll = await db.collection('leads').orderBy('savedAt','desc').get();
+    savedLeads = freshAll.docs.map(function(d){ return Object.assign({}, d.data(), {_id: d.id}); });
+    _allLeads = savedLeads;
     markDups();
-    setTimeout(function(){loadDashboard();},500);
-  } catch(e){showToast('❌ '+e.message);}
+    loadDashboard();
+  } catch(e) {
+    console.error('saveLead 오류:', e);
+    showToast('❌ 저장 실패: ' + (e.code||'') + ' ' + e.message);
+  }
 }
 
 // ═══ 검색 후 자동 저장 (A등급 전체 + 상위 B로 최소 5개) ═══
@@ -1220,21 +1229,47 @@ async function autoSaveTop(){
 }
 
 async function saveAllA(){
-  if (window._isMock) { showToast('⚠️ 예시 데이터는 저장할 수 없습니다. 다시 수집해보세요.'); return; }
-  var aList=searchLeads.filter(function(l){return l.grade==='A'&&!l.isDup;});
-  if(!aList.length){showToast('저장할 A등급이 없습니다');return;}
-  var saved=0;
-  for(var i=0;i<aList.length;i++){
-    var l=Object.assign({},aList[i]); delete l.raw;
-    try{await db.collection('leads').add(Object.assign({},l,{status:'연락전',savedAt:firebase.firestore.FieldValue.serverTimestamp()}));saved++;}catch(e){}
+  var aList = searchLeads.filter(function(l){ return l.grade==='A'; });
+  if (!aList.length) { showToast('⚠️ A등급 업체가 없습니다 (전체 ' + searchLeads.length + '건 중 A등급 0건)'); return; }
+  showToast('⏳ A등급 ' + aList.length + '건 저장 중...');
+  var btn = document.getElementById('save-all-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 저장 중...'; }
+
+  var saved = 0, skipped = 0, failed = 0, firstErr = null;
+  for (var i = 0; i < aList.length; i++) {
+    var l = Object.assign({}, aList[i]); delete l.raw;
+    try {
+      var dupSnap = await db.collection('leads').where('id','==', l.id||'').limit(1).get().catch(function(){ return null; });
+      if (dupSnap && !dupSnap.empty) { skipped++; continue; }
+      await db.collection('leads').add(Object.assign({}, l, {status:'연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()}));
+      saved++;
+    } catch(e) {
+      failed++;
+      if (!firstErr) firstErr = e;
+      console.error('saveAllA 개별 저장 실패:', l.name, e);
+    }
   }
-  showToast('⚡ A등급 '+saved+'건 일괄 저장 완료!');
+
+  if (saved > 0) {
+    showToast('✅ A등급 ' + saved + '건 저장 완료' + (skipped>0?' (중복 '+skipped+'건 제외)':'') + (failed>0?' (실패 '+failed+'건)':''));
+  } else if (skipped > 0 && failed === 0) {
+    showToast('⚠️ A등급 ' + aList.length + '건 모두 이미 저장돼 있습니다');
+  } else {
+    showToast('❌ 저장 실패: ' + (firstErr ? (firstErr.code||'')+' '+firstErr.message : '알 수 없는 오류'));
+    console.error('saveAllA 전체 실패, 첫 오류:', firstErr);
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '⚡ A등급 일괄 저장'; }
+
+  var freshAll = await db.collection('leads').orderBy('savedAt','desc').get().catch(function(){ return null; });
+  if (freshAll) {
+    savedLeads = freshAll.docs.map(function(d){ return Object.assign({}, d.data(), {_id: d.id}); });
+    _allLeads = savedLeads;
+  }
   markDups();
-  setTimeout(function(){
-    loadDashboard();
-    if(document.getElementById('page-today').classList.contains('active')) loadToday();
-    if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
-  },500);
+  loadDashboard();
+  if (document.getElementById('page-today').classList.contains('active')) loadToday();
+  if (document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
 }
 
 function markDups(){
