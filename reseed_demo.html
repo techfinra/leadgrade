@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>데이터 재설정</title></head>
 <body style="font-family:sans-serif;padding:24px;background:#0D1B3E;color:#fff;max-width:600px;margin:0 auto">
-<h2>🔄 시연 데이터 재설정</h2>
-<p style="color:#9db3d8;font-size:14px;line-height:1.7">기존 데이터를 <b>전부 삭제</b>하고, 개선된 점수 분포(96점 쏠림 해결)로 업체 45개를 새로 등록합니다.<br>등급 분포: A 16개(70~89점 위주) · B 16개(50~69점) · C 13개(28~49점)</p>
+<h2>🔄 시연 데이터 재설정 v2</h2>
+<p style="color:#9db3d8;font-size:14px;line-height:1.7">기존 데이터를 전부 삭제하고, 개선된 점수 분포로 업체 45개를 새로 등록합니다.<br>이번엔 각 저장에 8초 타임아웃을 걸어서 멈추지 않습니다.</p>
 <button id="btn" style="background:#C8A84B;color:#0D1B3E;border:none;padding:14px 28px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer">🔄 초기화 후 재등록</button>
-<div id="log" style="margin-top:20px;font-family:monospace;font-size:13px;line-height:1.9"></div>
+<div id="log" style="margin-top:20px;font-family:monospace;font-size:13px;line-height:1.9;max-height:400px;overflow-y:auto"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -25,43 +25,59 @@ function log(msg, color) {
   d.style.color = color || '#0f0';
   d.textContent = msg;
   document.getElementById('log').appendChild(d);
+  d.scrollIntoView();
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise(function(_, rej){ setTimeout(function(){ rej(new Error(label + ' 타임아웃(' + (ms/1000) + '초)')); }, ms); })
+  ]);
 }
 
 document.getElementById('btn').onclick = async function() {
   this.disabled = true;
   this.textContent = '⏳ 처리 중...';
 
-  // ① 기존 leads 전체 삭제
   log('🗑️ 기존 데이터 삭제 중...');
-  var snap = await db.collection('leads').get();
-  var docs = snap.docs;
-  for (var i = 0; i < docs.length; i += 400) {
-    var batch = db.batch();
-    docs.slice(i, i+400).forEach(function(d){ batch.delete(d.ref); });
-    await batch.commit();
+  try {
+    var snap = await withTimeout(db.collection('leads').get(), 15000, '조회');
+    var docs = snap.docs;
+    for (var i = 0; i < docs.length; i += 400) {
+      var batch = db.batch();
+      docs.slice(i, i+400).forEach(function(d){ batch.delete(d.ref); });
+      await withTimeout(batch.commit(), 15000, '삭제');
+    }
+    log('✅ ' + docs.length + '건 삭제 완료');
+  } catch(e) {
+    log('❌ 삭제 중 오류: ' + e.message + ' — 등록은 계속 진행합니다', '#fa0');
   }
-  log('✅ ' + docs.length + '건 삭제 완료');
 
-  // ② 새 데이터 등록
-  log('💾 새 데이터 ' + SAMPLE.length + '건 등록 중...');
-  var saved = 0;
+  log('💾 새 데이터 ' + SAMPLE.length + '건 등록 중... (건당 8초 제한)');
+  var saved = 0, failed = 0;
   for (var i = 0; i < SAMPLE.length; i++) {
     var l = Object.assign({}, SAMPLE[i]);
     try {
-      await db.collection('leads').add(Object.assign({}, l, {
-        status: l.status || '연락전',
-        savedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }));
+      await withTimeout(
+        db.collection('leads').add(Object.assign({}, l, {
+          status: l.status || '연락전',
+          savedAt: firebase.firestore.FieldValue.serverTimestamp()
+        })),
+        8000,
+        l.name || ('#'+i)
+      );
       saved++;
-      if (saved % 10 === 0) log('  ' + saved + '/' + SAMPLE.length + ' 완료...');
+      log('  ✓ [' + (i+1) + '/' + SAMPLE.length + '] ' + (l.name||'').slice(0,20) + ' (' + l.grade + ' ' + l.score + '점)');
     } catch(e) {
-      log('  ❌ ' + l.name + ' 저장 실패: ' + e.message, '#f44');
+      failed++;
+      log('  ❌ [' + (i+1) + '/' + SAMPLE.length + '] ' + (l.name||'') + ' 실패: ' + e.message, '#f44');
     }
   }
-  log('✅ 완료! ' + saved + '건 등록됨 (등급분포: A 16 · B 16 · C 13, 최고점 89점)', '#0f0');
   log('');
+  log('✅ 완료! 성공 ' + saved + '건 / 실패 ' + failed + '건', saved>0?'#0f0':'#f44');
   log('👉 https://leadgrade.vercel.app 에서 확인하세요.', '#fa0');
   this.textContent = '✅ 완료 (' + saved + '건)';
+  this.disabled = false;
 };
 </script>
 </body></html>
