@@ -921,7 +921,7 @@ async function loadDashboard(){
       var fu2=isFollowup(l)?'class="followup-alert"':'';
       rows+='<tr '+fu2+' onclick="openPanelSaved('+i+')">';
       rows+='<td>'+gradeCol(l.grade,l.score)+'</td>';
-      rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:2px">'+(l.name||'').slice(0,28)+'</div><div style="font-size:11px;color:var(--text3)">🏢 '+(l.org||'—')+'</div></td>';
+      rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:2px">'+(l.name||'').slice(0,28)+'</div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">🏢 '+(l.org||'—')+'</div><div>'+ownerBadge(l.owner)+'</div></td>';
       rows+='<td>'+tb(l.type)+'</td><td>'+stBadge(l.status||'연락전')+'</td>';
       rows+='<td>'+sb(l.score)+'</td>';
       rows+='<td style="font-weight:700;color:var(--text)">'+fa(l.amount)+'</td>';
@@ -948,6 +948,7 @@ function renderTop10(all){
     h+='<div onclick="openPanelSaved('+idx+')" style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer">';
     h+='<span style="width:22px;text-align:center;font-weight:900;font-size:13px;color:'+rankCol+'">'+(i+1)+'</span>';
     h+='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(l.name||'')+'</div><div style="font-size:9.5px;color:var(--text3)">'+escH((l.org||'—').slice(0,20))+'</div></div>';
+    h+='<div style="margin-right:4px">'+ownerBadge(l.owner)+'</div>';
     h+=gb(l.grade);
     h+='<span style="font-weight:800;font-size:13px;color:var(--blue);width:34px;text-align:right">'+l.score+'</span>';
     h+='</div>';
@@ -1037,6 +1038,7 @@ async function loadToday(){
         rsn.forEach(function(r){cards+='<div class="podium-reason"><span class="ico">✓</span><span>'+escH(r.slice(0,34))+'</span></div>';});
         cards+='</div>';
         cards+='<div class="podium-point"><div class="podium-point-lbl">추천 영업 포인트</div><div class="podium-point-val">'+salesPoint(l)+'</div></div>';
+        cards+='<div class="podium-owner-row" onclick="event.stopPropagation()">'+ownerAssignRow(l._id, l.owner)+'</div>';
         cards+='<div style="display:flex;gap:6px">';
         cards+='<button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();openPanelSaved('+idx+')">상세</button>';
         cards+='<button class="btn btn-success btn-sm" style="flex:1" data-id="'+l._id+'" onclick="event.stopPropagation();qsReach(this)">📞 연락</button>';
@@ -1110,6 +1112,7 @@ function renderPipelineBoard(){
       colsHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+gb(l.grade)+'<span style="font-size:9px;font-weight:800;color:var(--text3)">'+l.score+'점</span></div>';
       colsHtml+='<div class="kcard-name">'+escH((l.name||'').slice(0,40))+'</div>';
       colsHtml+='<div class="kcard-org">🏢 '+(l.org||'—').slice(0,20)+'</div>';
+      colsHtml+='<div style="margin-bottom:6px">'+ownerBadge(l.owner)+'</div>';
       colsHtml+='<div class="kcard-foot">'+tb(l.type)+'<span style="font-size:11px;color:var(--text3)">'+fa(l.amount)+'</span></div>';
       colsHtml+='<div class="kcard-move">';
       if(curIdx>0) colsHtml+='<button class="btn btn-sec btn-xs" data-id="'+l._id+'" data-to="'+STATUSES[curIdx-1]+'" onclick="event.stopPropagation();mvStatus(this)">◀</button>';
@@ -1169,7 +1172,7 @@ function filterLeads(){
     var fu2=isFollowup(l)?'class="followup-alert"':'';
     rows+='<tr '+fu2+' onclick="openPanelSaved('+idx+')">';
     rows+='<td>'+gradeCol(l.grade,l.score)+'</td>';
-    rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:1px">'+(l.name||'').slice(0,28)+(isFollowup(l)?'<span style="font-size:10px;color:var(--danger);margin-left:5px">⚠️</span>':'')+'</div><div style="font-size:11px;color:var(--text3)">🏢 '+(l.org||'—')+'</div></td>';
+    rows+='<td><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:1px">'+(l.name||'').slice(0,28)+(isFollowup(l)?'<span style="font-size:10px;color:var(--danger);margin-left:5px">⚠️</span>':'')+'</div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">🏢 '+(l.org||'—')+'</div><div>'+ownerBadge(l.owner)+'</div></td>';
     rows+='<td>'+tb(l.type)+'</td><td>'+stBadge(l.status||'연락전')+'</td>';
     rows+='<td>'+sb(l.score)+'</td><td>'+tc(l.timingClass)+'</td>';
     rows+='<td style="font-size:11px;color:var(--text3)">'+(l.field||'—')+'</td>';
@@ -2617,6 +2620,53 @@ function fdt(s){
 function escH(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function stBadge(s){return '<span class="sbadge s'+s+'">'+s+'</span>';}
 
+// ═══ 담당자 배정 ═══
+var OWNER_LIST = ['전힘찬 차장', '박경민 과장'];
+var OWNER_COLOR = { '전힘찬 차장': 'var(--blue)', '박경민 과장': 'var(--gold)' };
+
+function ownerBadge(owner){
+  if (!owner) return '<span style="font-size:10px;color:var(--text3);font-weight:600">미배정</span>';
+  var col = OWNER_COLOR[owner] || 'var(--text3)';
+  return '<span style="font-size:10.5px;font-weight:800;color:'+col+';background:'+col.replace('var(','rgba(').replace(')', ',.12)')+';padding:3px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:4px">👤 '+owner+'</span>';
+}
+
+// 오늘의영업 카드 등에서 쓰는 배정 행 (배지 + 버튼들)
+function ownerAssignRow(docId, currentOwner){
+  var html = '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 0;border-top:1px dashed var(--border);margin-top:6px">';
+  html += '<span style="font-size:10px;color:var(--text3);font-weight:700;margin-right:2px">담당자</span>';
+  html += ownerBadge(currentOwner);
+  OWNER_LIST.forEach(function(o){
+    var isCur = (o === currentOwner);
+    html += '<button class="btn btn-sec btn-xs" style="'+(isCur?'opacity:.4;pointer-events:none;':'')+'" data-owner-doc="'+docId+'" data-owner-name="'+o+'" onclick="assignOwnerClick(this)">'+o.split(' ')[0]+'</button>';
+  });
+  if (currentOwner) html += '<button class="btn btn-sec btn-xs" data-owner-doc="'+docId+'" data-owner-name="" onclick="assignOwnerClick(this)" style="color:var(--danger)">해제</button>';
+  html += '</div>';
+  return html;
+}
+
+function assignOwnerClick(btn){
+  var docId = btn.getAttribute('data-owner-doc');
+  var name  = btn.getAttribute('data-owner-name');
+  assignOwner(docId, name);
+}
+
+async function assignOwner(docId, ownerName){
+  try{
+    await db.collection('leads').doc(docId).update({ owner: ownerName || firebase.firestore.FieldValue.delete() });
+    // 로컬 상태 즉시 갱신 (모든 화면이 참조하는 savedLeads/_allLeads 동기화)
+    savedLeads.forEach(function(l){ if(l._id===docId) l.owner = ownerName || ''; });
+    _allLeads.forEach(function(l){ if(l._id===docId) l.owner = ownerName || ''; });
+    showToast(ownerName ? ('👤 담당자 배정: ' + ownerName) : '담당자 배정 해제');
+    // 현재 열려있는 화면들 다시 그려서 어디서든 즉시 반영되도록
+    if(document.getElementById('page-today').classList.contains('active')) loadToday();
+    if(document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
+    if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
+    if(document.getElementById('page-leads').classList.contains('active')) loadLeads();
+  }catch(e){
+    showToast('❌ 배정 실패: ' + e.message);
+  }
+}
+
 // ═══ 가상 스크롤 렌더링 ═══
 var RENDER_BATCH = 100, _renderIdx = 0, _renderList = [];
 
@@ -2712,6 +2762,12 @@ function openPanel(l,src,i){
   if(l.isLive) html+=' <span class="timing-badge timing-urgent" style="background:rgba(10,122,68,.12);color:var(--success);border-color:rgba(10,122,68,.3)">🟢 입찰 진행중'+(l.closeDiff!==null&&l.closeDiff>=0?' D-'+l.closeDiff:'')+'</span>';
   if(l.status) html+=' '+stBadge(l.status);
   html+='</div></div>';
+  if(src==='saved'){
+    html+='<div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:12px">';
+    html+='<div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:6px">담당자 배정</div>';
+    html+=ownerAssignRow(l._id, l.owner);
+    html+='</div>';
+  }
   html+='<div class="ai-box"><span class="ai-tag">AI Insight</span>';
   if(l.isLive&&l.closeDiff<=7){
     html+='<b>입찰 진행 중인 공고입니다.</b> 참여 기업들이 지금 신용평가서를 준비하고 있을 골든타임 — '+l.timing+' 내 연락 강력 권장.';
