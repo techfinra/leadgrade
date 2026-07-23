@@ -1189,19 +1189,37 @@ function filterLeads(){
 function sortLeads(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}filterLeads();}
 
 // ═══ 저장 ═══
+// 타임아웃 방어: Firestore 호출이 응답 없이 멈추는 것을 방지 (무한 로딩 원천 차단)
+function withTimeoutFS(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('응답 시간 초과(' + (ms/1000) + '초) — 네트워크 상태를 확인하세요')); }, ms); })
+  ]);
+}
+
 async function saveLead(i){
-  showToast('⏳ 저장 시도 중...');
   var src = searchLeads[i];
-  if (!src) { showToast('❌ 저장 실패: 대상 데이터를 찾을 수 없습니다(index='+i+')'); console.error('saveLead: searchLeads['+i+'] undefined'); return; }
+  if (!src) { showToast('❌ 저장 실패: 대상을 찾을 수 없습니다'); return; }
   var l = Object.assign({}, src); delete l.raw;
+
+  // 서버 조회 없이 로컬 savedLeads로 즉시 중복 판단 (빠르고 절대 멈추지 않음)
+  var already = savedLeads.some(function(s){ return s.id === l.id; });
+  if (already) {
+    showToast('⚠️ 이미 저장된 기업입니다');
+    l.isDup = true; // 화면도 즉시 반영
+    renderSearch(searchLeads);
+    return;
+  }
+
+  showToast('⏳ 저장 중...');
   try {
-    var dupSnap = await db.collection('leads').where('id','==',l.id||'').limit(1).get().catch(function(){ return null; });
-    if (dupSnap && !dupSnap.empty) { showToast('⚠️ 이미 저장된 기업입니다'); return; }
-    var docRef = await db.collection('leads').add(Object.assign({}, l, {status:'연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()}));
-    showToast('✅ 저장 완료: ' + (l.name||'').slice(0,18) + ' (id:' + docRef.id.slice(0,6) + ')');
+    var docRef = await withTimeoutFS(
+      db.collection('leads').add(Object.assign({}, l, {status:'연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()})),
+      10000
+    );
+    showToast('✅ 저장 완료: ' + (l.name||'').slice(0,18));
     closePanel();
-    var freshAll = await db.collection('leads').orderBy('savedAt','desc').get();
-    savedLeads = freshAll.docs.map(function(d){ return Object.assign({}, d.data(), {_id: d.id}); });
+    savedLeads.push(Object.assign({}, l, {_id: docRef.id, status:'연락전'}));
     _allLeads = savedLeads;
     markDups();
     loadDashboard();
@@ -1232,47 +1250,59 @@ async function autoSaveTop(){
 }
 
 async function saveAllA(){
-  var aList = searchLeads.filter(function(l){ return l.grade==='A'; });
-  if (!aList.length) { showToast('⚠️ A등급 업체가 없습니다 (전체 ' + searchLeads.length + '건 중 A등급 0건)'); return; }
-  showToast('⏳ A등급 ' + aList.length + '건 저장 중...');
   var btn = document.getElementById('save-all-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ 저장 중...'; }
+  try {
+    // 서버 조회 없이 로컬 savedLeads 기준으로 즉시 대상 추림 (빠르고 절대 멈추지 않음)
+    var savedIds = {};
+    savedLeads.forEach(function(s){ savedIds[s.id] = true; });
+    var aList = searchLeads.filter(function(l){ return l.grade==='A' && !savedIds[l.id]; });
+    var alreadyCount = searchLeads.filter(function(l){ return l.grade==='A' && savedIds[l.id]; }).length;
 
-  var saved = 0, skipped = 0, failed = 0, firstErr = null;
-  for (var i = 0; i < aList.length; i++) {
-    var l = Object.assign({}, aList[i]); delete l.raw;
-    try {
-      var dupSnap = await db.collection('leads').where('id','==', l.id||'').limit(1).get().catch(function(){ return null; });
-      if (dupSnap && !dupSnap.empty) { skipped++; continue; }
-      await db.collection('leads').add(Object.assign({}, l, {status:'연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()}));
-      saved++;
-    } catch(e) {
-      failed++;
-      if (!firstErr) firstErr = e;
-      console.error('saveAllA 개별 저장 실패:', l.name, e);
+    if (!aList.length) {
+      if (alreadyCount > 0) showToast('⚠️ A등급 ' + alreadyCount + '건 모두 이미 저장돼 있습니다');
+      else showToast('⚠️ A등급 업체가 없습니다');
+      return;
     }
-  }
 
-  if (saved > 0) {
-    showToast('✅ A등급 ' + saved + '건 저장 완료' + (skipped>0?' (중복 '+skipped+'건 제외)':'') + (failed>0?' (실패 '+failed+'건)':''));
-  } else if (skipped > 0 && failed === 0) {
-    showToast('⚠️ A등급 ' + aList.length + '건 모두 이미 저장돼 있습니다');
-  } else {
-    showToast('❌ 저장 실패: ' + (firstErr ? (firstErr.code||'')+' '+firstErr.message : '알 수 없는 오류'));
-    console.error('saveAllA 전체 실패, 첫 오류:', firstErr);
-  }
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 저장 중... (0/' + aList.length + ')'; }
 
-  if (btn) { btn.disabled = false; btn.textContent = '⚡ A등급 일괄 저장'; }
+    var saved = 0, failed = 0, firstErr = null;
+    for (var i = 0; i < aList.length; i++) {
+      var l = Object.assign({}, aList[i]); delete l.raw;
+      try {
+        var docRef = await withTimeoutFS(
+          db.collection('leads').add(Object.assign({}, l, {status:'연락전', savedAt: firebase.firestore.FieldValue.serverTimestamp()})),
+          10000
+        );
+        savedLeads.push(Object.assign({}, l, {_id: docRef.id, status:'연락전'}));
+        saved++;
+      } catch(e) {
+        failed++;
+        if (!firstErr) firstErr = e;
+        console.error('saveAllA 개별 저장 실패:', l.name, e);
+      }
+      if (btn) btn.textContent = '⏳ 저장 중... (' + (i+1) + '/' + aList.length + ')';
+    }
 
-  var freshAll = await db.collection('leads').orderBy('savedAt','desc').get().catch(function(){ return null; });
-  if (freshAll) {
-    savedLeads = freshAll.docs.map(function(d){ return Object.assign({}, d.data(), {_id: d.id}); });
+    if (saved > 0) {
+      showToast('✅ A등급 ' + saved + '건 저장 완료' + (failed>0?' (실패 '+failed+'건)':''));
+    } else {
+      showToast('❌ 저장 실패: ' + (firstErr ? (firstErr.code||'')+' '+firstErr.message : '알 수 없는 오류'));
+    }
+
     _allLeads = savedLeads;
+    markDups();
+    loadDashboard();
+    if (document.getElementById('page-today').classList.contains('active')) loadToday();
+    if (document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
+
+  } catch(e) {
+    console.error('saveAllA 전체 오류:', e);
+    showToast('❌ 오류: ' + e.message);
+  } finally {
+    // 무슨 일이 있어도 버튼은 반드시 원상복구 (멈춘 상태로 남지 않도록)
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ A등급 일괄 저장'; }
   }
-  markDups();
-  loadDashboard();
-  if (document.getElementById('page-today').classList.contains('active')) loadToday();
-  if (document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
 }
 
 function markDups(){
