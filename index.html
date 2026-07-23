@@ -2226,8 +2226,12 @@ async function simulateFetchLeads(){
     var bidnm = org + ' ' + demoPick(DEMO_BIDS);
     var bizno = demoRandBizno();
     var bidcount = demoPick([1,1,2,2,3,3,4,5,6]);
-    var score = 35 + Math.floor(Math.random()*62);
-    var grade = score>=70?'A':(score>=50?'B':'C');
+    // 등급별로 먼저 정하고 그 안에서 점수 산정 → 특정 점수대 쏠림 방지, 현실적인 분포
+    var gradeRoll = Math.random();
+    var score, grade;
+    if (gradeRoll < 0.30) { grade='A'; score = 70 + Math.floor(Math.random()*Math.random()*27); }       // 70~96, 낮은쪽에 더 몰림
+    else if (gradeRoll < 0.62) { grade='B'; score = 50 + Math.floor(Math.random()*20); }                 // 50~69
+    else { grade='C'; score = 28 + Math.floor(Math.random()*22); }                                       // 28~49
     var amount = demoPick([15000000,32000000,58000000,120000000,230000000,45000000,88000000]);
     var closeday = 1+Math.floor(Math.random()*35);
     var tc = (closeday>=4&&closeday<=21) ? 'timing-urgent' : (closeday<=35?'timing-soon':'timing-normal');
@@ -2238,15 +2242,19 @@ async function simulateFetchLeads(){
     if (grade==='A') reasons.push(closeday<=7 ? '마감 D-'+closeday+' — 당일발급 어필 적기' : '마감 D-'+closeday+' — 입찰서류 준비 골든타임');
     reasons.push('평균 낙찰금액 ' + (amount>=1e8?(amount/1e8).toFixed(1)+'억':Math.round(amount/1e4)+'만'));
 
+    var regDt = '2025-0'+(1+Math.floor(Math.random()*7))+'-'+(10+Math.floor(Math.random()*18));
+    var closeDt = '2025-0'+(7+Math.floor(Math.random()*2))+'-'+(1+Math.floor(Math.random()*28));
+    var method = demoPick(DEMO_METHODS);
+
     resultItems.push({
       id: bizno+'_'+Math.random().toString(36).slice(2,7),
       name: pick[0], bizno: bizno, org: org, bidNm: bidnm,
       bidNtceNo: 'R25BK'+(10000000+Math.floor(Math.random()*89999999)),
       field: pick[1], score: score, grade: grade,
       amount: amount, totalAmt: amount*bidcount, bidCount: bidcount,
-      method: demoPick(DEMO_METHODS),
-      regDt: '2025-0'+(1+Math.floor(Math.random()*7))+'-'+(10+Math.floor(Math.random()*18)),
-      closeDt: '2025-0'+(7+Math.floor(Math.random()*2))+'-'+(1+Math.floor(Math.random()*28)),
+      method: method,
+      regDt: regDt,
+      closeDt: closeDt,
       closeDay: closeday, timingClass: tc,
       timing: closeday<=21?('마감 D-'+closeday):'2주 이내',
       type: bidcount>=3?'집중관리형':(matched?'전환형':'신규발굴형'),
@@ -2260,8 +2268,8 @@ async function simulateFetchLeads(){
         이용여부: 0
       },
       isDup: false, isLive: closeday<=35, closeDiff: closeday,
-      detailUrl: 'https://www.google.com/search?q=' + encodeURIComponent('나라장터 ' + bidnm),
-      scsbidSearchUrl: 'https://www.google.com/search?q=' + encodeURIComponent('나라장터 낙찰 ' + pick[0])
+      detailUrl: '/demo_view.html?type=bid&bidnm=' + encodeURIComponent(bidnm) + '&org=' + encodeURIComponent(org) + '&date=' + closeDt + '&method=' + encodeURIComponent(method) + '&amt=' + amount,
+      scsbidSearchUrl: '/demo_view.html?type=scsbid&name=' + encodeURIComponent(pick[0]) + '&bizno=' + bizno + '&org=' + encodeURIComponent(org) + '&date=' + regDt + '&method=' + encodeURIComponent(method) + '&amt=' + amount + '&bidcount=' + bidcount
     });
   }
   resultItems.sort(function(a,b){ return b.score-a.score; });
