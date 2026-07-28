@@ -399,7 +399,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <div class="ai-box" style="margin-bottom:16px"><span class="ai-tag">📞 통화결과 표준화</span>통화 결과를 표준 9개 코드로 기록하면, 유사 기업의 추천 정확도가 개선됩니다. 관심고객·대면전환 시 자동으로 대면영업 모드로 이관됩니다.</div>
 
   <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
-    <div class="kpi"><div class="kpi-lbl">📞 누적 통화</div><div class="kpi-val" id="tm-total-calls">—</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="openTMCallLogModal()"><div class="kpi-lbl">📞 누적 통화</div><div class="kpi-val" id="tm-total-calls">—</div><div class="kpi-sub">클릭해서 전체 이력 보기</div></div>
     <div class="kpi gold"><div class="kpi-lbl">⭐ 관심고객 전환율</div><div class="kpi-val" id="tm-interest-rate">—</div></div>
     <div class="kpi green"><div class="kpi-lbl">🏢 대면이관 건수</div><div class="kpi-val" id="tm-handoff-count">—</div></div>
   </div>
@@ -764,12 +764,58 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       <p style="font-size:10px;color:var(--text3);margin-top:8px">엔드포인트: getScsbidListSttusCnstwk(공사)·Servc(용역)·Thng(물품) · 조회조건: inqryDiv=1(등록일시 기준) · 확인된 데이터 보유기간: <b>최소 2011년~현재 (15년+)</b></p>
     </div>
 
-    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px">
+    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
       <h3 style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px">🔗 두 API를 어떻게 교차매칭하나요?</h3>
       <div style="font-size:12px;color:var(--text2);line-height:2">
         <b>① 수요기관 일치</b> — 입찰공고의 <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">dminsttNm</code>과 낙찰이력의 <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">dminsttNm</code>이 같으면 그 기관에 낙찰 이력 있는 업체로 판단 (+20점)<br>
         <b>② 공고명 유사도</b> — 두 API의 <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">bidNtceNm</code>을 단어(2글자↑) 단위로 쪼개서 34% 이상 겹치면 유사 공고로 판단 (+13점, 기관까지 겹치면 +30점)<br>
         <b>③ 분야 일치</b> — <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px">bidClsfcNo</code>만 같으면 약한 신호로 처리 (+5점)
+      </div>
+    </div>
+
+    <!-- ═══ v2 업데이트: TM모드 · 대면영업모드 ═══ -->
+    <div class="sec" style="margin-top:24px">🆕 LeadGrade AI v2 — TM 모드 · 대면영업 모드</div>
+
+    <div style="background:linear-gradient(135deg,rgba(107,63,204,.06),rgba(26,111,232,.05));border:1.5px solid rgba(107,63,204,.2);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
+      <h3 style="font-size:13px;font-weight:800;color:var(--purple);margin-bottom:6px">☎️ TM 모드</h3>
+      <p style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:10px">전화 영업(TM) 결과를 <b>표준 9개 코드</b>로만 기록하도록 강제해서, 담당자마다 기준이 달라지는 문제를 막습니다.</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">📵 미수신</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">🔁 재접촉필요</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">🚫 수요없음</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">⚔️ 경쟁사이용</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">🌱 잠재수요</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--gold);font-weight:700">⭐ 관심고객</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">📝 전환진행</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--success);font-weight:700">✅ 성과발생</div>
+        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--danger);font-weight:700">🏢 대면전환</div>
+      </div>
+      <p style="font-size:11px;color:var(--text3);line-height:1.7">누적통화·관심고객전환율·대면이관건수를 상단 KPI로 집계하고, <b>누적통화 카드를 클릭</b>하면 전체 통화 이력을 팝업으로 볼 수 있습니다. 각 기업 카드에는 최근 통화결과가 색상 배지로 항상 표시됩니다.</p>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(200,136,10,.06),rgba(26,111,232,.05));border:1.5px solid rgba(200,136,10,.2);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
+      <h3 style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:6px">🏢 대면영업 모드</h3>
+      <p style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:10px"><b>기업 영업우선점수</b>와 <b>담당자 적합도</b>는 서로 다른 판단입니다. 이 모드는 각 기업에 어떤 담당자가 가장 잘 맞는지를 별도로 계산합니다.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:8px">
+        <tr><td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:700">① 업종 적합성</td><td style="padding:6px 8px;border-bottom:1px solid var(--border)">담당자 전문분야(공사·용역·물품)와 기업 분야 일치</td><td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:900;text-align:right">25점</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:700">② 지역 적합성</td><td style="padding:6px 8px;border-bottom:1px solid var(--border)">기업 소재지(발주기관명에서 추정) ↔ 담당자 담당지역</td><td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:900;text-align:right">25점</td></tr>
+        <tr><td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:700">③ 네트워크 연관성</td><td style="padding:6px 8px;border-bottom:1px solid var(--border)">담당자가 기존 접점 보유한 발주기관인지</td><td style="padding:6px 8px;border-bottom:1px solid var(--border);font-weight:900;text-align:right">25점</td></tr>
+        <tr><td style="padding:6px 8px;font-weight:700">④ 업무량</td><td style="padding:6px 8px">담당자가 현재 진행중인 건수 (적을수록 고점)</td><td style="padding:6px 8px;font-weight:900;text-align:right">25점</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--text3);line-height:1.7">기업마다 적합도 상위 2명을 🥇🥈 카드로 추천하고, 담당자가 직접 승인(배정)합니다. AI가 자동배정하지 않고 <b>사람이 최종 확인</b>하는 구조입니다.</p>
+    </div>
+
+    <div style="background:rgba(200,136,10,.06);border:1.5px solid rgba(200,136,10,.2);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
+      <h3 style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:6px">🔗 TM ↔ 대면영업 자동 연계</h3>
+      <p style="font-size:12px;color:var(--text2);line-height:1.8">TM 모드에서 통화결과를 <b>⭐관심고객</b> 또는 <b>🏢대면전환</b>으로 기록하면, 해당 기업 상태가 자동으로 <b>대면이관대기</b>로 바뀌고 대면영업 모드 목록 최상단에 강조 표시됩니다. 파이프라인 칸반에도 "대면이관대기" 컬럼이 자동 생깁니다.</p>
+    </div>
+
+    <div style="background:rgba(107,63,204,.06);border:1.5px solid rgba(107,63,204,.2);border-radius:var(--radius-lg);padding:16px 18px">
+      <h3 style="font-size:13px;font-weight:800;color:var(--purple);margin-bottom:6px">👤 담당자 샘플 프로필 (3명)</h3>
+      <div style="font-size:11.5px;color:var(--text2);line-height:2">
+        <b style="color:var(--blue)">전힘찬 차장</b> — 서울·인천·경기 담당, 공사·용역 전문, 공공기관 네트워크 강점<br>
+        <b style="color:var(--gold)">박경민 과장</b> — 서울·경기·강원 담당, 용역·물품 전문, 캐피탈·카드사 커버리지<br>
+        <b style="color:var(--purple)">육태우 과장</b> — 대전·부산·인천 담당, 공사·물품 전문, 제조·환경 업종 경험
       </div>
     </div>
 
@@ -2813,7 +2859,7 @@ function renderTMCallList(list){
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
     html += gb(l.grade);
     html += '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--text)">'+escH(l.name||'')+'</div><div style="font-size:10.5px;color:var(--text3)">🏢 '+escH((l.org||'—').slice(0,26))+' · '+l.score+'점 · '+ownerBadge(l.owner)+'</div></div>';
-    html += '<div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--text3)">추천시간</div><div style="font-size:11.5px;font-weight:800;color:var(--blue)">'+tmSuggestTime(l)+'</div></div>';
+    html += '<div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--text3)">추천시간</div><div style="font-size:11.5px;font-weight:800;color:var(--blue)">'+tmSuggestTime(l)+'</div><div id="tm-latest-badge-'+l._id+'" style="margin-top:3px"></div></div>';
     html += '</div>';
     html += '<div style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px">💬 '+tmSuggestPoint(l)+'</div>';
 
@@ -2880,14 +2926,75 @@ async function saveTMLog(docId, code){
 
 async function loadTMHistoryMini(docId){
   var el = document.getElementById('tm-log-history-'+docId);
+  var latestEl = document.getElementById('tm-latest-badge-'+docId);
   if (!el) return;
   try{
-    var snap = await withTimeoutFS(db.collection('tmCallLogs').where('leadId','==',docId).orderBy('calledAt','desc').limit(3).get(), 8000);
-    if (snap.empty) { el.textContent=''; return; }
-    var items = [];
-    snap.forEach(function(d){ var v=d.data(); items.push(v.resultCode); });
-    el.innerHTML = '🕐 최근 이력: ' + items.join(' → ');
+    var snap = await withTimeoutFS(db.collection('tmCallLogs').where('leadId','==',docId).orderBy('calledAt','desc').limit(5).get(), 8000);
+    if (snap.empty) {
+      el.innerHTML = '';
+      if (latestEl) latestEl.innerHTML = '<span style="font-size:9.5px;color:var(--text3)">통화이력 없음</span>';
+      return;
+    }
+    var chips = '';
+    var latest = null;
+    snap.forEach(function(d){
+      var v = d.data();
+      if (!latest) latest = v;
+      var col = tmCodeColor(v.resultCode);
+      chips += '<span style="font-size:9.5px;font-weight:700;color:'+col+';background:'+col.replace('var(','rgba(').replace(')',',.12)')+';padding:2px 7px;border-radius:10px;margin-right:4px;display:inline-block;margin-top:3px">'+tmCodeIco(v.resultCode)+' '+v.resultCode+'</span>';
+    });
+    el.innerHTML = '<div style="font-size:9px;color:var(--text3);font-weight:700;margin-top:6px;margin-bottom:2px">🕐 통화 이력 (최근순)</div>' + chips;
+    if (latestEl && latest) {
+      var lcol = tmCodeColor(latest.resultCode);
+      latestEl.innerHTML = '<span style="font-size:10px;font-weight:800;color:'+lcol+'">최근: '+tmCodeIco(latest.resultCode)+' '+latest.resultCode+'</span>';
+    }
   } catch(e){ /* 인덱스 미생성 등은 조용히 무시 */ }
+}
+
+function tmCodeColor(code){
+  var m = TM_RESULT_CODES.find(function(r){ return r.code===code; });
+  return m ? m.color : 'var(--text3)';
+}
+function tmCodeIco(code){
+  var m = TM_RESULT_CODES.find(function(r){ return r.code===code; });
+  return m ? m.ico : '📞';
+}
+
+// ═══ 누적 통화 클릭 → 전체 통화이력 팝업 ═══
+async function openTMCallLogModal(){
+  document.getElementById('modal-body').innerHTML = '<div style="text-align:center;padding:30px"><div class="spinner"></div></div>';
+  document.querySelector('#score-modal h3').textContent = '☎️ 전체 통화 이력';
+  document.getElementById('score-modal').classList.add('open');
+  try{
+    var snap = await withTimeoutFS(db.collection('tmCallLogs').orderBy('calledAt','desc').limit(100).get(), 10000);
+    if (snap.empty) {
+      document.getElementById('modal-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">📭</span><div>아직 기록된 통화가 없습니다</div></div>';
+      return;
+    }
+    // 리드 이름 매핑 (savedLeads에서)
+    var nameMap = {};
+    (savedLeads||[]).forEach(function(l){ nameMap[l._id] = l.name; });
+
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto">';
+    snap.forEach(function(d){
+      var v = d.data();
+      var col = tmCodeColor(v.resultCode);
+      var when = v.calledAt && v.calledAt.toDate ? v.calledAt.toDate().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+      html += '<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border-left:3px solid '+col+'">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">';
+      html += '<span style="font-size:12.5px;font-weight:800;color:var(--text)">'+escH(nameMap[v.leadId]||'(삭제된 기업)')+'</span>';
+      html += '<span style="font-size:10px;color:var(--text3)">'+when+'</span>';
+      html += '</div>';
+      html += '<span style="font-size:10.5px;font-weight:700;color:'+col+'">'+tmCodeIco(v.resultCode)+' '+v.resultCode+'</span>';
+      if (v.memo) html += '<div style="font-size:11px;color:var(--text2);margin-top:4px">💬 '+escH(v.memo)+'</div>';
+      if (v.nextCallDate) html += '<div style="font-size:10px;color:var(--blue);margin-top:2px">📅 재접촉 예정: '+v.nextCallDate+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    document.getElementById('modal-body').innerHTML = html;
+  } catch(e){
+    document.getElementById('modal-body').innerHTML = errHtml(e);
+  }
 }
 
 async function renderTMStats(){
@@ -3200,7 +3307,7 @@ function openScoreModal(i,mode){
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('score-modal').classList.add('open');
 }
-function closeModal(){document.getElementById('score-modal').classList.remove('open');}
+function closeModal(){document.getElementById('score-modal').classList.remove('open');document.querySelector('#score-modal h3').textContent='📊 점수 상세';}
 
 function getMock(){
   function mk(o){return Object.assign({},o,{timingClass:o.score>=70?'timing-urgent':o.score>=50?'timing-soon':'timing-normal',timing:o.score>=70?'3영업일 이내':o.score>=50?'이번 주 내':'2주 이내',breakdown:o.bd,detailUrl:'',closeDt:'',isDup:false,bidCount:o.bidCount||1,totalAmt:o.amount});}
