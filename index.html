@@ -203,6 +203,7 @@ tr.followup-alert{background:rgba(192,57,43,.04)!important;border-left:2.5px sol
 .s미팅예정{background:rgba(107,63,204,.1);color:var(--purple);border:1px solid rgba(107,63,204,.25)}
 .s계약성공{background:rgba(10,122,68,.1);color:var(--success);border:1px solid rgba(10,122,68,.25)}
 .s보류{background:rgba(100,100,100,.1);color:var(--text3);border:1px solid rgba(100,100,100,.2)}
+.s대면이관대기{background:rgba(200,136,10,.12);color:var(--gold);border:1px solid rgba(200,136,10,.3)}
 
 /* SCORE BAR */
 .sbar{display:flex;align-items:center;gap:7px}
@@ -339,7 +340,8 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <div class="sb-label">Intelligence</div>
   <button class="nav active" onclick="showPage(&apos;dashboard&apos;,this)"><span class="nav-icon">📊</span>대시보드</button>
   <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
-  <button class="nav" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">👤</span>담당자 배정</button>
+  <button class="nav" onclick="showPage(&apos;tm&apos;,this)"><span class="nav-icon">☎️</span>TM 모드</button>
+  <button class="nav" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">🏢</span>대면영업 모드</button>
   <button class="nav" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
   <button class="nav" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
   <div class="sb-label">System</div>
@@ -391,11 +393,31 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 </div>
 
 <!-- 담당자 배정 -->
+<!-- TM 모드 -->
+<div class="page" id="page-tm">
+  <div class="sec">☎️ TM 모드</div>
+  <div class="ai-box" style="margin-bottom:16px"><span class="ai-tag">📞 통화결과 표준화</span>통화 결과를 표준 9개 코드로 기록하면, 유사 기업의 추천 정확도가 개선됩니다. 관심고객·대면전환 시 자동으로 대면영업 모드로 이관됩니다.</div>
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+    <div class="kpi"><div class="kpi-lbl">📞 누적 통화</div><div class="kpi-val" id="tm-total-calls">—</div></div>
+    <div class="kpi gold"><div class="kpi-lbl">⭐ 관심고객 전환율</div><div class="kpi-val" id="tm-interest-rate">—</div></div>
+    <div class="kpi green"><div class="kpi-lbl">🏢 대면이관 건수</div><div class="kpi-val" id="tm-handoff-count">—</div></div>
+  </div>
+
+  <div class="sec" style="margin-top:0">오늘 우선 전화할 기업 <span id="tm-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
+  <div id="tm-call-list" style="display:flex;flex-direction:column;gap:10px">
+    <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
+  </div>
+</div>
+
 <div class="page" id="page-owner">
-  <div class="sec">👤 담당자 배정</div>
-  <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">📋 배정 관리</span>저장된 전체 기업을 담당자(전힘찬 차장 · 박경민 과장)에게 배정하세요. 배정 즉시 대시보드·오늘의영업·파이프라인·영업리스트에 반영됩니다.</div>
-  <div class="sec" style="margin-top:0">전체 기업 <span id="owner-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
-  <div id="owner-assign-list" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:8px">
+  <div class="sec">🏢 대면영업 모드</div>
+  <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">🎯 적합도 매칭</span>기업의 영업우선점수와 <b>담당자 적합도는 서로 다른 판단</b>입니다. 업종·지역·네트워크·업무량 4가지 기준으로 각 기업에 가장 잘 맞는 담당자를 추천합니다.</div>
+
+  <div id="tm-handoff-banner" style="display:none"></div>
+
+  <div class="sec" style="margin-top:0">배정 대상 기업 <span id="owner-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
+  <div id="owner-assign-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px">
     <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
   </div>
 </div>
@@ -856,7 +878,7 @@ async function naraFetchAll(svc, ep, qsFn, targetCount, maxPages) {
   return all;
 }
 var sortKey='', sortDir=-1;
-var STATUSES=['연락전','연락중','미팅예정','계약성공','보류'];
+var STATUSES=['연락전','연락중','대면이관대기','미팅예정','계약성공','보류'];
 
 // ═══ 테마 ═══
 var _dark=false;
@@ -879,6 +901,7 @@ function showPage(id,btn){
   else if(id==='pipeline') loadPipeline();
   else if(id==='today') loadToday();
   else if(id==='owner') loadOwnerAssignPage();
+  else if(id==='tm') loadTMPage();
   else if(id==='settings') loadScsbidMeta();
   else if(id==='search') loadScsbidMiniStatus();
 }
@@ -1122,7 +1145,7 @@ function renderPipelineBoard(){
   var board=document.getElementById('kanban-board');
   var all=_pipelineAll;
   var colsHtml='';
-  var STATUS_COLORS={'연락전':'var(--blue)','연락중':'var(--warn)','미팅예정':'var(--purple)','계약성공':'var(--success)','보류':'var(--text3)'};
+  var STATUS_COLORS={'연락전':'var(--blue)','연락중':'var(--warn)','대면이관대기':'var(--gold)','미팅예정':'var(--purple)','계약성공':'var(--success)','보류':'var(--text3)'};
   STATUSES.forEach(function(s){
     var items=all.filter(function(l){return (l.status||'연락전')===s;});
     var showN=_pipelineShowCount[s]||5;
@@ -2645,8 +2668,71 @@ function escH(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 function stBadge(s){return '<span class="sbadge s'+s+'">'+s+'</span>';}
 
 // ═══ 담당자 배정 ═══
-var OWNER_LIST = ['전힘찬 차장', '박경민 과장'];
-var OWNER_COLOR = { '전힘찬 차장': 'var(--blue)', '박경민 과장': 'var(--gold)' };
+var OWNER_LIST = ['전힘찬 차장', '박경민 과장', '육태우 과장'];
+var OWNER_COLOR = { '전힘찬 차장': 'var(--blue)', '박경민 과장': 'var(--gold)', '육태우 과장': 'var(--purple)' };
+
+// ═══ 담당자 프로필 (대면영업 모드 적합도 산정용, 샘플 데이터) ═══
+var REP_PROFILES = {
+  '전힘찬 차장': {
+    industries: ['용역','공사'],
+    regions: ['서울','인천','경기'],
+    network: ['행정안전부','서울특별시교육청','한국토지주택공사','서울특별시 강동구','경기신용보증재단'],
+    pastNote: '금융기관·신한계열 RM 경력, 공공기관 네트워크 강점'
+  },
+  '박경민 과장': {
+    industries: ['용역','물품'],
+    regions: ['서울','경기'],
+    network: ['조달청','한국수자원공사','경기도시공사','한국철도공사','경기신용보증재단'],
+    pastNote: 'IBK 기업심사 8년 경력, 캐피탈·카드사 커버리지'
+  },
+  '육태우 과장': {
+    industries: ['공사','물품'],
+    regions: ['대전','부산','인천'],
+    network: ['국방부','대전광역시교육청','부산광역시','한국환경공단','국토교통부 원주지방국토관리청'],
+    pastNote: '제조·환경 업종 상담 경험, 지방 소재 기업 네트워크'
+  }
+};
+var REGION_KEYWORDS = ['서울','경기','인천','부산','대전','대구','광주','울산','세종'];
+function guessRegion(org){
+  if(!org) return null;
+  for(var i=0;i<REGION_KEYWORDS.length;i++){ if(org.indexOf(REGION_KEYWORDS[i])>=0) return REGION_KEYWORDS[i]; }
+  return null;
+}
+
+// ═══ 담당자 적합도 산정 (기업 점수와 별개의 판단 — 대면영업 모드 핵심) ═══
+function calcRepFit(lead, repName){
+  var p = REP_PROFILES[repName];
+  if(!p) return { score:0, reasons:[] };
+  var reasons = [];
+  var score = 0;
+
+  // ① 업종 적합성 (25점)
+  if (p.industries.indexOf(lead.field) >= 0) { score += 25; reasons.push({ico:'🏭',label:'업종 적합',detail:lead.field+' 분야 경험 보유'}); }
+  else { score += 8; }
+
+  // ② 지역 적합성 (25점)
+  var region = guessRegion(lead.org);
+  if (region && p.regions.indexOf(region) >= 0) { score += 25; reasons.push({ico:'📍',label:'지역 동선',detail:region+' 권역 담당'}); }
+  else { score += 8; }
+
+  // ③ 네트워크 연관성 (25점)
+  if (lead.org && p.network.indexOf(lead.org) >= 0) { score += 25; reasons.push({ico:'🤝',label:'기존 네트워크',detail:lead.org+' 기존 접점 보유'}); }
+  else { score += 5; }
+
+  // ④ 업무량 (25점) — 현재 이 담당자에게 배정된(진행중) 건수가 적을수록 높은 점수
+  var load = (savedLeads||[]).filter(function(l){ return l.owner===repName && l.status!=='계약성공' && l.status!=='보류'; }).length;
+  var loadScore = load===0?25 : load<=3?20 : load<=7?15 : 8;
+  score += loadScore;
+  reasons.push({ico:'📊',label:'업무량',detail:'현재 진행중 '+load+'건 ('+(loadScore>=20?'여유':loadScore>=15?'보통':'과다')+')'});
+
+  return { score: Math.min(score,100), reasons: reasons, load: load };
+}
+
+function topFitReps(lead, n){
+  return OWNER_LIST.map(function(r){ return Object.assign({name:r}, calcRepFit(lead, r)); })
+    .sort(function(a,b){ return b.score-a.score; })
+    .slice(0, n||2);
+}
 
 function ownerBadge(owner){
   if (!owner) return '<span style="font-size:10px;color:var(--text3);font-weight:600">미배정</span>';
@@ -2668,6 +2754,157 @@ function ownerAssignRow(docId, currentOwner){
   return html;
 }
 
+// ═══════════════════════════════════════════
+// ═══ TM 모드 — 통화결과 표준화 & 학습 ═══
+// ═══════════════════════════════════════════
+var TM_RESULT_CODES = [
+  { code:'미수신',       ico:'📵', color:'var(--text3)' },
+  { code:'재접촉필요',   ico:'🔁', color:'var(--warn)' },
+  { code:'수요없음',     ico:'🚫', color:'var(--text3)' },
+  { code:'경쟁사이용',   ico:'⚔️', color:'var(--text3)' },
+  { code:'잠재수요',     ico:'🌱', color:'var(--blue)' },
+  { code:'관심고객',     ico:'⭐', color:'var(--gold)' },
+  { code:'전환진행',     ico:'📝', color:'var(--purple)' },
+  { code:'성과발생',     ico:'✅', color:'var(--success)' },
+  { code:'대면전환',     ico:'🏢', color:'var(--danger)' }
+];
+var TM_HANDOFF_CODES = ['관심고객','대면전환']; // 이 결과가 나오면 대면영업 모드로 자동 이관
+
+async function loadTMPage(){
+  try{
+    var all = await fbGet();
+    savedLeads = all; _allLeads = all;
+    var badge = document.getElementById('tm-total-badge');
+
+    // TM 대상: 아직 계약성공/보류가 아닌 저장 기업 전체, 점수순
+    var targets = all.filter(function(l){ return l.status!=='계약성공' && l.status!=='보류'; })
+      .sort(function(a,b){ return (b.score||0)-(a.score||0); });
+    if (badge) badge.textContent = targets.length + '개사';
+
+    renderTMCallList(targets);
+    await renderTMStats();
+  } catch(e){
+    var el = document.getElementById('tm-call-list');
+    if (el) el.innerHTML = errHtml(e);
+  }
+}
+
+function tmSuggestTime(l){
+  // 골든타임(closeDay) 있으면 그걸 활용, 없으면 기본 시간대 추천
+  if (l.closeDay!=null && l.closeDay<=7) return '오전 10:00 (마감임박 우선)';
+  if (l.grade==='A') return '오전 10:30';
+  return '오후 2:00';
+}
+function tmSuggestPoint(l){
+  if ((l.method||'').indexOf('적격')>=0) return '신용평가서 필요 여부 확인 — 적격심사 대상';
+  if (l.bidCount>=3) return '반복 낙찰 이력 언급 — 정기 평가 수요 확인';
+  if (l.closeDay!=null && l.closeDay<=7) return '마감 임박 — 당일 발급 가능성 안내';
+  return '최근 조달 활동 확인 및 니즈 파악';
+}
+
+function renderTMCallList(list){
+  var el = document.getElementById('tm-call-list');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">✅</span><div>오늘 전화할 대상이 없습니다</div></div>'; return; }
+
+  var html = '';
+  list.slice(0,30).forEach(function(l){
+    html += '<div class="tm-card" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+    html += gb(l.grade);
+    html += '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--text)">'+escH(l.name||'')+'</div><div style="font-size:10.5px;color:var(--text3)">🏢 '+escH((l.org||'—').slice(0,26))+' · '+l.score+'점 · '+ownerBadge(l.owner)+'</div></div>';
+    html += '<div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--text3)">추천시간</div><div style="font-size:11.5px;font-weight:800;color:var(--blue)">'+tmSuggestTime(l)+'</div></div>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px">💬 '+tmSuggestPoint(l)+'</div>';
+
+    // 통화결과 코드 버튼 9개
+    html += '<div style="font-size:9.5px;font-weight:800;color:var(--text3);margin-bottom:6px">통화 결과 기록</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px">';
+    TM_RESULT_CODES.forEach(function(rc){
+      html += '<button class="btn btn-sec btn-xs" style="border-color:'+rc.color+';color:'+rc.color+'" data-tm-doc="'+l._id+'" data-tm-code="'+rc.code+'" onclick="openTMLogForm(this)">'+rc.ico+' '+rc.code+'</button>';
+    });
+    html += '</div>';
+    html += '<div id="tm-log-form-'+l._id+'"></div>';
+    html += '<div id="tm-log-history-'+l._id+'" style="font-size:10.5px;color:var(--text3);margin-top:6px"></div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+
+  // 각 카드의 최근 통화이력 비동기 로드
+  list.slice(0,30).forEach(function(l){ loadTMHistoryMini(l._id); });
+}
+
+function openTMLogForm(btn){
+  var docId = btn.getAttribute('data-tm-doc');
+  var code  = btn.getAttribute('data-tm-code');
+  var box = document.getElementById('tm-log-form-'+docId);
+  if (!box) return;
+  box.innerHTML =
+    '<div style="background:rgba(26,111,232,.05);border:1.5px solid rgba(26,111,232,.2);border-radius:10px;padding:10px;margin-bottom:8px">' +
+    '<div style="font-size:11.5px;font-weight:800;color:var(--blue);margin-bottom:6px">선택: '+code+'</div>' +
+    '<textarea id="tm-memo-'+docId+'" placeholder="메모 (선택)" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;resize:vertical;min-height:44px;margin-bottom:6px"></textarea>' +
+    '<div style="display:flex;gap:6px;align-items:center">' +
+    '<input type="date" id="tm-next-'+docId+'" style="font-size:11px;padding:6px;border:1px solid var(--border);border-radius:6px;flex:1">' +
+    '<button class="btn btn-primary btn-sm" onclick="saveTMLog(&apos;'+docId+'&apos;,&apos;'+code+'&apos;)">저장</button>' +
+    '<button class="btn btn-sec btn-sm" onclick="document.getElementById(&apos;tm-log-form-'+docId+'&apos;).innerHTML=&apos;&apos;">취소</button>' +
+    '</div></div>';
+}
+
+async function saveTMLog(docId, code){
+  var memo = (document.getElementById('tm-memo-'+docId)||{}).value || '';
+  var next = (document.getElementById('tm-next-'+docId)||{}).value || '';
+  try{
+    await withTimeoutFS(db.collection('tmCallLogs').add({
+      leadId: docId, resultCode: code, memo: memo, nextCallDate: next,
+      calledAt: firebase.firestore.FieldValue.serverTimestamp()
+    }), 10000);
+
+    // 대면 이관 트리거
+    if (TM_HANDOFF_CODES.indexOf(code) >= 0) {
+      await withTimeoutFS(db.collection('leads').doc(docId).update({
+        status: '대면이관대기', tmHandoffReason: code
+      }), 10000);
+      refreshLocalAndPanel(docId, {status:'대면이관대기', tmHandoffReason: code});
+      showToast('🏢 대면영업 모드로 자동 이관됨 (' + code + ')');
+    } else {
+      showToast('☎️ 통화결과 저장: ' + code);
+    }
+
+    document.getElementById('tm-log-form-'+docId).innerHTML = '';
+    loadTMHistoryMini(docId);
+    renderTMStats();
+  } catch(e){
+    showToast('❌ 저장 실패: ' + e.message);
+  }
+}
+
+async function loadTMHistoryMini(docId){
+  var el = document.getElementById('tm-log-history-'+docId);
+  if (!el) return;
+  try{
+    var snap = await withTimeoutFS(db.collection('tmCallLogs').where('leadId','==',docId).orderBy('calledAt','desc').limit(3).get(), 8000);
+    if (snap.empty) { el.textContent=''; return; }
+    var items = [];
+    snap.forEach(function(d){ var v=d.data(); items.push(v.resultCode); });
+    el.innerHTML = '🕐 최근 이력: ' + items.join(' → ');
+  } catch(e){ /* 인덱스 미생성 등은 조용히 무시 */ }
+}
+
+async function renderTMStats(){
+  try{
+    var snap = await withTimeoutFS(db.collection('tmCallLogs').get(), 10000);
+    var total = snap.size;
+    var counts = {};
+    snap.forEach(function(d){ var c=d.data().resultCode; counts[c]=(counts[c]||0)+1; });
+    var interestLike = (counts['관심고객']||0) + (counts['전환진행']||0) + (counts['성과발생']||0) + (counts['대면전환']||0);
+    var rate = total>0 ? Math.round(interestLike/total*100) : 0;
+    var handoff = (counts['관심고객']||0) + (counts['대면전환']||0);
+    var elT = document.getElementById('tm-total-calls'); if(elT) elT.textContent = total;
+    var elR = document.getElementById('tm-interest-rate'); if(elR) elR.textContent = rate + '%';
+    var elH = document.getElementById('tm-handoff-count'); if(elH) elH.textContent = handoff;
+  } catch(e){}
+}
+
 async function loadOwnerAssignPage(){
   try {
     var all = await fbGet();
@@ -2683,28 +2920,69 @@ async function loadOwnerAssignPage(){
 
 function renderOwnerAssignList(all){
   var el = document.getElementById('owner-assign-list');
+  var banner = document.getElementById('tm-handoff-banner');
   if (!el) return;
   if (!all.length) {
     el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">📭</span><div>저장된 기업이 없습니다</div></div>';
     return;
   }
-  var list = all.slice().sort(function(a,b){ return (b.score||0)-(a.score||0); });
+  // A/B등급 우선, TM에서 이관된 기업(대면이관대기)은 최상단
+  var list = all.filter(function(l){ return l.grade==='A'||l.grade==='B'||l.status==='대면이관대기'; })
+    .sort(function(a,b){
+      var ah = a.status==='대면이관대기'?1:0, bh = b.status==='대면이관대기'?1:0;
+      if (ah!==bh) return bh-ah;
+      return (b.score||0)-(a.score||0);
+    });
+
+  var handoffCount = list.filter(function(l){ return l.status==='대면이관대기'; }).length;
+  if (banner) {
+    if (handoffCount>0) {
+      banner.style.display='';
+      banner.innerHTML = '<div style="background:rgba(200,136,10,.1);border:1.5px solid rgba(200,136,10,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#7a6423">☎️→🏢 TM 모드에서 <b>'+handoffCount+'건</b>이 대면영업 이관 대기 중입니다 (아래 목록 상단 강조 표시)</div>';
+    } else banner.style.display='none';
+  }
+
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">📭</span><div>배정 대상(A·B등급) 기업이 없습니다</div></div>';
+    return;
+  }
+
   var html = '';
   list.forEach(function(l){
-    html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)">';
-    html += '<div style="flex-shrink:0">'+gb(l.grade)+'</div>';
-    html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(l.name||'')+'</div>';
-    html += '<div style="font-size:10.5px;color:var(--text3)">🏢 '+escH((l.org||'—').slice(0,30))+' · '+l.score+'점</div>';
-    html += '</div>';
-    html += '<div style="flex-shrink:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">';
+    var isHandoff = l.status==='대면이관대기';
+    var fits = topFitReps(l, 2);
+    html += '<div style="background:var(--surface);border:1.5px solid '+(isHandoff?'rgba(200,136,10,.4)':'var(--border)')+';border-radius:var(--radius-lg);padding:14px 16px'+(isHandoff?';box-shadow:0 0 0 3px rgba(200,136,10,.08)':'')+'">';
+
+    // 헤더: 기업명 + 등급 + 현재 담당자
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+    html += gb(l.grade);
+    html += '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--text)">'+escH(l.name||'')+(isHandoff?' <span style="font-size:9px;background:var(--gold);color:#fff;padding:2px 6px;border-radius:10px;font-weight:800;vertical-align:middle">TM이관</span>':'')+'</div><div style="font-size:10.5px;color:var(--text3)">🏢 '+escH((l.org||'—').slice(0,26))+' · 영업우선점수 '+l.score+'점 · '+(l.field||'기타')+'</div></div>';
     html += ownerBadge(l.owner);
-    OWNER_LIST.forEach(function(o){
-      var isCur = (o === l.owner);
-      html += '<button class="btn btn-sec btn-xs" style="'+(isCur?'opacity:.35;pointer-events:none;':'')+'" data-owner-doc="'+l._id+'" data-owner-name="'+o+'" onclick="assignOwnerClick(this)">'+o.split(' ')[0]+'</button>';
+    html += '</div>';
+
+    // 추천 담당자 카드 2개 (적합도)
+    html += '<div style="font-size:9.5px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.5px">🎯 추천 담당자 (적합도 기준)</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+    fits.forEach(function(f, fi){
+      var isCur = (f.name === l.owner);
+      var col = fi===0 ? 'var(--success)' : 'var(--blue)';
+      html += '<div style="background:var(--surface2);border:1.5px solid '+(isCur?col:'var(--border)')+';border-radius:10px;padding:10px">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
+      html += '<span style="font-size:12px;font-weight:800;color:var(--text)">'+(fi===0?'🥇 ':'🥈 ')+f.name+'</span>';
+      html += '<span style="font-size:13px;font-weight:900;color:'+col+'">'+f.score+'점</span>';
+      html += '</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">';
+      f.reasons.slice(0,2).forEach(function(r){
+        html += '<span style="font-size:9px;background:rgba(0,0,0,.04);color:var(--text2);padding:2px 6px;border-radius:8px">'+r.ico+' '+r.label+'</span>';
+      });
+      html += '</div>';
+      html += '<button class="btn '+(isCur?'btn-sec':'btn-primary')+' btn-xs" style="width:100%'+(isCur?';opacity:.4;pointer-events:none':'')+'" data-owner-doc="'+l._id+'" data-owner-name="'+f.name+'" onclick="assignOwnerClick(this)">'+(isCur?'✓ 배정됨':'이 담당자로 배정')+'</button>';
+      html += '</div>';
     });
-    if (l.owner) html += '<button class="btn btn-sec btn-xs" data-owner-doc="'+l._id+'" data-owner-name="" onclick="assignOwnerClick(this)" style="color:var(--danger)">해제</button>';
-    html += '</div></div>';
+    html += '</div>';
+
+    if (l.owner) html += '<button class="btn btn-sec btn-xs" data-owner-doc="'+l._id+'" data-owner-name="" onclick="assignOwnerClick(this)" style="color:var(--danger)">배정 해제</button>';
+    html += '</div>';
   });
   el.innerHTML = html;
 }
@@ -2728,6 +3006,7 @@ async function assignOwner(docId, ownerName){
     if(document.getElementById('page-pipeline').classList.contains('active')) loadPipeline();
     if(document.getElementById('page-leads').classList.contains('active')) loadLeads();
     if(document.getElementById('page-owner').classList.contains('active')) renderOwnerAssignList(savedLeads);
+    if(document.getElementById('page-tm').classList.contains('active')) loadTMPage();
     // 지금 열려있는 상세 패널이 방금 배정한 업체와 같으면 즉시 다시 그려서 실시간 반영
     if(_curPanel && _curPanel.docId === docId){
       if(_curPanel.src==='saved') openPanelSaved(_curPanel.i);
