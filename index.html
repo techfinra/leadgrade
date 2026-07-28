@@ -405,7 +405,13 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   </div>
 
   <div class="sec" style="margin-top:0">오늘 우선 전화할 기업 <span id="tm-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
-  <div id="tm-call-list" style="display:flex;flex-direction:column;gap:10px">
+  <div id="tm-call-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px">
+    <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
+  </div>
+
+  <div class="sec">🔁 재접촉 대상 <span id="tm-followup-badge" style="font-size:10px;color:var(--warn);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:12px">통화 결과를 남긴 기업 중 <b>수요없음</b>을 제외한 나머지는 여기서 관리하세요. 다시 통화하면 최신 결과로 갱신됩니다.</div>
+  <div id="tm-followup-list" style="display:flex;flex-direction:column;gap:10px">
     <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
   </div>
 </div>
@@ -2820,14 +2826,44 @@ async function loadTMPage(){
   try{
     var all = await fbGet();
     savedLeads = all; _allLeads = all;
-    var badge = document.getElementById('tm-total-badge');
 
-    // TM 대상: 아직 계약성공/보류가 아닌 저장 기업 전체, 점수순
-    var targets = all.filter(function(l){ return l.status!=='계약성공' && l.status!=='보류'; })
+    // TM 대상 후보: 계약성공/보류 제외
+    var candidates = all.filter(function(l){ return l.status!=='계약성공' && l.status!=='보류'; })
       .sort(function(a,b){ return (b.score||0)-(a.score||0); });
-    if (badge) badge.textContent = targets.length + '개사';
 
-    renderTMCallList(targets);
+    // 통화이력 한 번만 조회해서 리드별로 그룹핑 (개별 카드마다 재조회 안 함 — 효율적)
+    var logSnap = await withTimeoutFS(db.collection('tmCallLogs').orderBy('calledAt','desc').limit(500).get(), 12000).catch(function(){ return null; });
+    var logsByLead = {};
+    if (logSnap) {
+      logSnap.forEach(function(d){
+        var v = d.data();
+        if (!logsByLead[v.leadId]) logsByLead[v.leadId] = [];
+        logsByLead[v.leadId].push(v);
+      });
+    }
+    _tmLogsByLead = logsByLead; // 팝업에서 재사용
+
+    // 분류: 수요없음(최근결과)=제외 / 통화이력 있음=재접촉 대상 / 이력 없음=오늘 우선 전화
+    var todayList = [], followupList = [];
+    candidates.forEach(function(l){
+      var logs = logsByLead[l._id];
+      if (logs && logs.length) {
+        if (logs[0].resultCode === '수요없음') return; // 제외
+        followupList.push(l);
+      } else {
+        todayList.push(l);
+      }
+    });
+
+    var badge = document.getElementById('tm-total-badge');
+    if (badge) badge.textContent = todayList.length + '개사';
+
+    renderTMSection('tm-call-list', todayList, logsByLead, false);
+    renderTMSection('tm-followup-list', followupList, logsByLead, true);
+
+    var fuBadge = document.getElementById('tm-followup-badge');
+    if (fuBadge) fuBadge.textContent = followupList.length + '개사';
+
     await renderTMStats();
   } catch(e){
     var el = document.getElementById('tm-call-list');
@@ -2835,8 +2871,9 @@ async function loadTMPage(){
   }
 }
 
+var _tmLogsByLead = {}; // 전체 통화이력 캐시 (팝업 등에서 재사용)
+
 function tmSuggestTime(l){
-  // 골든타임(closeDay) 있으면 그걸 활용, 없으면 기본 시간대 추천
   if (l.closeDay!=null && l.closeDay<=7) return '오전 10:00 (마감임박 우선)';
   if (l.grade==='A') return '오전 10:30';
   return '오후 2:00';
@@ -2848,22 +2885,42 @@ function tmSuggestPoint(l){
   return '최근 조달 활동 확인 및 니즈 파악';
 }
 
-function renderTMCallList(list){
-  var el = document.getElementById('tm-call-list');
+function renderTMSection(containerId, list, logsByLead, isFollowup){
+  var el = document.getElementById(containerId);
   if (!el) return;
-  if (!list.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">✅</span><div>오늘 전화할 대상이 없습니다</div></div>'; return; }
-
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)"><span class="ei">'+(isFollowup?'📋':'✅')+'</span><div>'+(isFollowup?'재접촉 대상이 없습니다':'오늘 전화할 대상이 없습니다')+'</div></div>';
+    return;
+  }
   var html = '';
-  list.slice(0,30).forEach(function(l){
-    html += '<div class="tm-card" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">';
+  list.slice(0,40).forEach(function(l){
+    var logs = logsByLead[l._id] || [];
+    var latest = logs[0];
+    html += '<div class="tm-card" id="tm-card-'+l._id+'" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;transition:all .35s ease;overflow:hidden">';
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
     html += gb(l.grade);
     html += '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--text)">'+escH(l.name||'')+'</div><div style="font-size:10.5px;color:var(--text3)">🏢 '+escH((l.org||'—').slice(0,26))+' · '+l.score+'점 · '+ownerBadge(l.owner)+'</div></div>';
-    html += '<div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--text3)">추천시간</div><div style="font-size:11.5px;font-weight:800;color:var(--blue)">'+tmSuggestTime(l)+'</div><div id="tm-latest-badge-'+l._id+'" style="margin-top:3px"></div></div>';
-    html += '</div>';
-    html += '<div style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px">💬 '+tmSuggestPoint(l)+'</div>';
+    html += '<div style="text-align:right;flex-shrink:0">';
+    if (isFollowup && latest && latest.nextCallDate) {
+      html += '<div style="font-size:10px;color:var(--text3)">재접촉 예정</div><div style="font-size:11.5px;font-weight:800;color:var(--blue)">'+latest.nextCallDate+'</div>';
+    } else {
+      html += '<div style="font-size:10px;color:var(--text3)">추천시간</div><div style="font-size:11.5px;font-weight:800;color:var(--blue)">'+tmSuggestTime(l)+'</div>';
+    }
+    html += '</div></div>';
 
-    // 통화결과 코드 버튼 9개
+    // 통화횟수 배지(클릭→팝업) + 최근 결과 배지
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">';
+    html += '<span style="font-size:10.5px;font-weight:700;color:var(--text2);background:var(--surface2);padding:3px 9px;border-radius:20px;cursor:pointer" onclick="openLeadCallHistoryModal(&apos;'+l._id+'&apos;,&apos;'+escH(l.name||'').replace(/'/g,"&apos;")+'&apos;)">☎️ 통화 '+logs.length+'회'+(logs.length>0?' · 이력보기':'')+'</span>';
+    if (latest) {
+      var lcol = tmCodeColor(latest.resultCode);
+      html += '<span style="font-size:10.5px;font-weight:800;color:'+lcol+';background:'+lcol.replace('var(','rgba(').replace(')',',.12)')+';padding:3px 9px;border-radius:20px">최근: '+tmCodeIco(latest.resultCode)+' '+latest.resultCode+'</span>';
+    }
+    html += '</div>';
+
+    if (!isFollowup) {
+      html += '<div style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px">💬 '+tmSuggestPoint(l)+'</div>';
+    }
+
     html += '<div style="font-size:9.5px;font-weight:800;color:var(--text3);margin-bottom:6px">통화 결과 기록</div>';
     html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px">';
     TM_RESULT_CODES.forEach(function(rc){
@@ -2871,13 +2928,9 @@ function renderTMCallList(list){
     });
     html += '</div>';
     html += '<div id="tm-log-form-'+l._id+'"></div>';
-    html += '<div id="tm-log-history-'+l._id+'" style="font-size:10.5px;color:var(--text3);margin-top:6px"></div>';
     html += '</div>';
   });
   el.innerHTML = html;
-
-  // 각 카드의 최근 통화이력 비동기 로드
-  list.slice(0,30).forEach(function(l){ loadTMHistoryMini(l._id); });
 }
 
 function openTMLogForm(btn){
@@ -2905,50 +2958,62 @@ async function saveTMLog(docId, code){
       calledAt: firebase.firestore.FieldValue.serverTimestamp()
     }), 10000);
 
-    // 대면 이관 트리거
     if (TM_HANDOFF_CODES.indexOf(code) >= 0) {
       await withTimeoutFS(db.collection('leads').doc(docId).update({
         status: '대면이관대기', tmHandoffReason: code
       }), 10000);
       refreshLocalAndPanel(docId, {status:'대면이관대기', tmHandoffReason: code});
       showToast('🏢 대면영업 모드로 자동 이관됨 (' + code + ')');
+    } else if (code === '수요없음') {
+      showToast('🚫 수요없음 — 목록에서 제외됩니다');
     } else {
-      showToast('☎️ 통화결과 저장: ' + code);
+      showToast('☎️ 통화결과 저장: ' + code + ' — 재접촉 대상으로 이동');
     }
 
-    document.getElementById('tm-log-form-'+docId).innerHTML = '';
-    loadTMHistoryMini(docId);
-    renderTMStats();
+    // 카드를 슬라이드아웃 시킨 뒤(다른 카드가 위로 채워짐), 최신 데이터로 섹션 재구성
+    var cardEl = document.getElementById('tm-card-'+docId);
+    if (cardEl) {
+      cardEl.style.maxHeight = cardEl.scrollHeight + 'px'; // 시작값 고정
+      requestAnimationFrame(function(){
+        cardEl.style.maxHeight = '0px';
+        cardEl.style.opacity = '0';
+        cardEl.style.marginBottom = '0px';
+        cardEl.style.paddingTop = '0px';
+        cardEl.style.paddingBottom = '0px';
+      });
+      setTimeout(function(){ loadTMPage(); }, 380);
+    } else {
+      loadTMPage();
+    }
   } catch(e){
     showToast('❌ 저장 실패: ' + e.message);
   }
 }
 
-async function loadTMHistoryMini(docId){
-  var el = document.getElementById('tm-log-history-'+docId);
-  var latestEl = document.getElementById('tm-latest-badge-'+docId);
-  if (!el) return;
-  try{
-    var snap = await withTimeoutFS(db.collection('tmCallLogs').where('leadId','==',docId).orderBy('calledAt','desc').limit(5).get(), 8000);
-    if (snap.empty) {
-      el.innerHTML = '';
-      if (latestEl) latestEl.innerHTML = '<span style="font-size:9.5px;color:var(--text3)">통화이력 없음</span>';
-      return;
-    }
-    var chips = '';
-    var latest = null;
-    snap.forEach(function(d){
-      var v = d.data();
-      if (!latest) latest = v;
-      var col = tmCodeColor(v.resultCode);
-      chips += '<span style="font-size:9.5px;font-weight:700;color:'+col+';background:'+col.replace('var(','rgba(').replace(')',',.12)')+';padding:2px 7px;border-radius:10px;margin-right:4px;display:inline-block;margin-top:3px">'+tmCodeIco(v.resultCode)+' '+v.resultCode+'</span>';
-    });
-    el.innerHTML = '<div style="font-size:9px;color:var(--text3);font-weight:700;margin-top:6px;margin-bottom:2px">🕐 통화 이력 (최근순)</div>' + chips;
-    if (latestEl && latest) {
-      var lcol = tmCodeColor(latest.resultCode);
-      latestEl.innerHTML = '<span style="font-size:10px;font-weight:800;color:'+lcol+'">최근: '+tmCodeIco(latest.resultCode)+' '+latest.resultCode+'</span>';
-    }
-  } catch(e){ /* 인덱스 미생성 등은 조용히 무시 */ }
+// ═══ 리드별 통화이력 팝업 (이미 로드된 캐시 재사용 — 추가 조회 없음) ═══
+function openLeadCallHistoryModal(leadId, leadName){
+  var logs = _tmLogsByLead[leadId] || [];
+  document.querySelector('#score-modal h3').textContent = '☎️ ' + leadName + ' 통화 이력';
+  document.getElementById('score-modal').classList.add('open');
+  if (!logs.length) {
+    document.getElementById('modal-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">📭</span><div>아직 통화 이력이 없습니다</div></div>';
+    return;
+  }
+  var html = '<div style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto">';
+  logs.forEach(function(v){
+    var col = tmCodeColor(v.resultCode);
+    var when = v.calledAt && v.calledAt.toDate ? v.calledAt.toDate().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+    html += '<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border-left:3px solid '+col+'">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">';
+    html += '<span style="font-size:11.5px;font-weight:800;color:'+col+'">'+tmCodeIco(v.resultCode)+' '+v.resultCode+'</span>';
+    html += '<span style="font-size:10px;color:var(--text3)">'+when+'</span>';
+    html += '</div>';
+    if (v.memo) html += '<div style="font-size:11px;color:var(--text2);margin-top:4px">💬 '+escH(v.memo)+'</div>';
+    if (v.nextCallDate) html += '<div style="font-size:10px;color:var(--blue);margin-top:2px">📅 재접촉 예정: '+v.nextCallDate+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  document.getElementById('modal-body').innerHTML = html;
 }
 
 function tmCodeColor(code){
