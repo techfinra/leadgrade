@@ -2681,7 +2681,7 @@ var REP_PROFILES = {
   },
   '박경민 과장': {
     industries: ['용역','물품'],
-    regions: ['서울','경기'],
+    regions: ['서울','경기','강원'],
     network: ['조달청','한국수자원공사','경기도시공사','한국철도공사','경기신용보증재단'],
     pastNote: 'IBK 기업심사 8년 경력, 캐피탈·카드사 커버리지'
   },
@@ -2692,7 +2692,7 @@ var REP_PROFILES = {
     pastNote: '제조·환경 업종 상담 경험, 지방 소재 기업 네트워크'
   }
 };
-var REGION_KEYWORDS = ['서울','경기','인천','부산','대전','대구','광주','울산','세종'];
+var REGION_KEYWORDS = ['서울','경기','강원','인천','부산','대전','대구','광주','울산','세종','충북','충남','전북','전남','경북','경남','제주'];
 function guessRegion(org){
   if(!org) return null;
   for(var i=0;i<REGION_KEYWORDS.length;i++){ if(org.indexOf(REGION_KEYWORDS[i])>=0) return REGION_KEYWORDS[i]; }
