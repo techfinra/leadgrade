@@ -337,17 +337,18 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 
 <div class="app">
 <aside>
+  <div class="sb-label" style="margin-top:8px">Sales Mode</div>
+  <div id="sales-mode-switcher" style="display:flex;gap:6px;padding:0 20px 14px">
+    <button id="mode-btn-owner" class="mode-toggle-btn active" onclick="setSalesMode(&apos;owner&apos;)">🤝<br>대면영업</button>
+    <button id="mode-btn-tm" class="mode-toggle-btn" onclick="setSalesMode(&apos;tm&apos;)">☎️<br>TM모드</button>
+  </div>
   <div class="sb-label">Search</div>
   <button class="nav" id="nav-search" onclick="showPage(&apos;search&apos;,this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
   <div class="sb-label">Intelligence</div>
   <button class="nav active" onclick="showPage(&apos;dashboard&apos;,this)"><span class="nav-icon">📊</span>대시보드</button>
   <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
-  <div class="sb-label">Sales Mode</div>
-  <div id="sales-mode-switcher" style="display:flex;gap:6px;padding:0 20px 12px">
-    <button id="mode-btn-owner" class="mode-toggle-btn active" onclick="setSalesMode(&apos;owner&apos;)">🤝<br>대면영업</button>
-    <button id="mode-btn-tm" class="mode-toggle-btn" onclick="setSalesMode(&apos;tm&apos;)">☎️<br>TM모드</button>
-  </div>
   <button class="nav" id="nav-tm" onclick="showPage(&apos;tm&apos;,this)" style="display:none"><span class="nav-icon">☎️</span>TM 대시보드</button>
+  <button class="nav" id="nav-tm-calls" onclick="showPage(&apos;tmcalls&apos;,this)" style="display:none"><span class="nav-icon">📞</span>TM 콜 리스트</button>
   <button class="nav" id="nav-owner" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">🏢</span>대면영업 대시보드</button>
   <button class="nav" id="nav-pipeline" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
   <button class="nav" id="nav-leads" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
@@ -428,10 +429,16 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
     <div class="kpi green"><div class="kpi-lbl">🏢 대면이관 건수</div><div class="kpi-val" id="tm-handoff-count">—</div></div>
   </div>
 
+</div>
+
+<!-- TM 콜 리스트 -->
+<div class="page" id="page-tmcalls">
+  <div class="sec">📞 TM 콜 리스트</div>
+
   <!-- 오늘 우선 연락 고객 히어로 카드 -->
   <div id="tm-hero-card" style="display:none"></div>
 
-  <div class="sec">오늘 우선 전화할 기업 <span id="tm-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
+  <div class="sec" style="margin-top:0">오늘 우선 전화할 기업 <span id="tm-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
   <div id="tm-call-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px">
     <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
   </div>
@@ -969,18 +976,19 @@ function setSalesMode(mode){
   var btnOwner = document.getElementById('mode-btn-owner');
   var btnTM    = document.getElementById('mode-btn-tm');
   var navTM       = document.getElementById('nav-tm');
+  var navTMCalls  = document.getElementById('nav-tm-calls');
   var navOwner    = document.getElementById('nav-owner');
   var navPipeline = document.getElementById('nav-pipeline');
   var navLeads    = document.getElementById('nav-leads');
 
   if (mode==='tm') {
     btnTM.classList.add('active'); btnOwner.classList.remove('active');
-    navTM.style.display=''; navOwner.style.display='none';
+    navTM.style.display=''; navTMCalls.style.display=''; navOwner.style.display='none';
     navPipeline.style.display='none'; navLeads.style.display='none';
     showPage('tm', navTM);
   } else {
     btnOwner.classList.add('active'); btnTM.classList.remove('active');
-    navOwner.style.display=''; navTM.style.display='none';
+    navOwner.style.display=''; navTM.style.display='none'; navTMCalls.style.display='none';
     navPipeline.style.display=''; navLeads.style.display='';
     showPage('owner', navOwner);
   }
@@ -997,6 +1005,7 @@ function showPage(id,btn){
   else if(id==='today') loadToday();
   else if(id==='owner') loadOwnerAssignPage();
   else if(id==='tm') loadTMPage();
+  else if(id==='tmcalls') loadTMPage();
   else if(id==='settings') loadScsbidMeta();
   else if(id==='search') loadScsbidMiniStatus();
 }
