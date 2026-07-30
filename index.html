@@ -58,6 +58,8 @@ header{position:fixed;top:0;left:0;right:0;height:60px;z-index:1000;display:flex
 .app{display:flex;min-height:100vh;padding-top:60px}
 aside{width:240px;flex-shrink:0;position:fixed;top:60px;left:0;bottom:0;background:var(--surface);border-right:1.5px solid var(--border);display:flex;flex-direction:column;padding:20px 12px;z-index:100;transition:background .3s,border .3s;box-shadow:var(--shadow)}
 .sb-label{font-size:9px;font-weight:800;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin:18px 0 5px 14px}
+.mode-toggle-btn{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:8px 4px;font-size:10px;font-weight:800;color:var(--text3);cursor:pointer;line-height:1.6;transition:all .15s}
+.mode-toggle-btn.active{background:linear-gradient(135deg,#0D1F4E,#1a3570);color:#fff;border-color:#0D1F4E}
 .nav{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;border:none;background:none;width:100%;text-align:left;color:var(--text3);transition:all .2s;position:relative;overflow:hidden}
 .nav::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue);transform:scaleY(0);transition:.2s;border-radius:0 2px 2px 0}
 .nav:hover{color:var(--text);background:rgba(26,111,232,.07)}
@@ -336,17 +338,22 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 <div class="app">
 <aside>
   <div class="sb-label">Search</div>
-  <button class="nav" onclick="showPage(&apos;search&apos;,this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
+  <button class="nav" id="nav-search" onclick="showPage(&apos;search&apos;,this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
   <div class="sb-label">Intelligence</div>
   <button class="nav active" onclick="showPage(&apos;dashboard&apos;,this)"><span class="nav-icon">📊</span>대시보드</button>
   <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
-  <button class="nav" onclick="showPage(&apos;tm&apos;,this)"><span class="nav-icon">☎️</span>TM 모드</button>
-  <button class="nav" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">🏢</span>대면영업 모드</button>
-  <button class="nav" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
-  <button class="nav" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
+  <div class="sb-label">Sales Mode</div>
+  <div id="sales-mode-switcher" style="display:flex;gap:6px;padding:0 20px 12px">
+    <button id="mode-btn-owner" class="mode-toggle-btn active" onclick="setSalesMode(&apos;owner&apos;)">🤝<br>대면영업</button>
+    <button id="mode-btn-tm" class="mode-toggle-btn" onclick="setSalesMode(&apos;tm&apos;)">☎️<br>TM모드</button>
+  </div>
+  <button class="nav" id="nav-tm" onclick="showPage(&apos;tm&apos;,this)" style="display:none"><span class="nav-icon">☎️</span>TM 대시보드</button>
+  <button class="nav" id="nav-owner" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">🏢</span>대면영업 대시보드</button>
+  <button class="nav" id="nav-pipeline" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
+  <button class="nav" id="nav-leads" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
   <div class="sb-label">System</div>
-  <button class="nav" onclick="showPage(&apos;guide&apos;,this)"><span class="nav-icon">📖</span>가이드</button>
-  <button class="nav" onclick="showPage(&apos;settings&apos;,this)"><span class="nav-icon">⚙️</span>설정</button>
+  <button class="nav" id="nav-guide" onclick="showPage(&apos;guide&apos;,this)"><span class="nav-icon">📖</span>가이드</button>
+  <button class="nav" id="nav-settings" onclick="showPage(&apos;settings&apos;,this)"><span class="nav-icon">⚙️</span>설정</button>
   <div class="sb-foot">
     <div id="sb-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--blue);animation:blink 2s infinite"></div><span style="font-size:11px;color:var(--text3);margin-left:7px">연결 확인 중...</span></div>
     <div id="sb-detail" style="font-size:10px;color:var(--text3);line-height:1.9;margin-top:4px"></div>
@@ -371,7 +378,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
     <div class="chart-card"><div class="chart-title">🏆 TOP 10 기업 <span style="font-size:9px;color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">점수순</span></div><div id="top10-list" style="margin-top:8px"></div></div>
     <div class="chart-card"><div class="chart-title">🕐 최근 조회 이력 <span style="font-size:9px;color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">최근 5건</span></div><div id="search-history-list" style="margin-top:8px"></div></div>
   </div>
-  <div class="sec">최근 저장 기업 <span class="sec-action" onclick="showPage(&apos;leads&apos;,document.querySelectorAll(&apos;.nav&apos;)[4])">전체 보기 →</span></div>
+  <div class="sec">최근 저장 기업 <span class="sec-action" onclick="showPage(&apos;leads&apos;,document.getElementById(&apos;nav-leads&apos;))">전체 보기 →</span></div>
   <div class="tbl-wrap"><table>
     <thead><tr><th>등급</th><th>공고명</th><th>유형</th><th>상태</th><th>점수</th><th>금액</th><th>저장일</th><th>삭제</th></tr></thead>
     <tbody id="dash-tbody"><tr><td colspan="8"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
@@ -396,21 +403,41 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 <!-- TM 모드 -->
 <div class="page" id="page-tm">
   <div class="sec">☎️ TM 모드</div>
-  <div class="ai-box" style="margin-bottom:16px"><span class="ai-tag">📞 통화결과 표준화</span>통화 결과를 표준 9개 코드로 기록하면, 유사 기업의 추천 정확도가 개선됩니다. 관심고객·대면전환 시 자동으로 대면영업 모드로 이관됩니다.</div>
 
-  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
-    <div class="kpi" style="cursor:pointer" onclick="openTMCallLogModal()"><div class="kpi-lbl">📞 누적 통화</div><div class="kpi-val" id="tm-total-calls">—</div><div class="kpi-sub">클릭해서 전체 이력 보기</div></div>
+  <!-- TM 대시보드: 통화결과 표준화 & 학습 -->
+  <div style="background:linear-gradient(135deg,#0D1F4E,#1a3570);border-radius:var(--radius-lg);padding:20px 22px;margin-bottom:20px;color:#fff">
+    <div style="font-size:13px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">🤖</span>TM 통화 결과 표준화 & 학습</div>
+
+    <div style="font-size:10px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:8px">통화 결과 분류 (표준화)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
+      <div style="background:rgba(179,92,0,.25);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px">🔁</div><div style="font-size:11px;font-weight:700;margin-top:4px">재접촉필요</div></div>
+      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px">⚔️</div><div style="font-size:11px;font-weight:700;margin-top:4px">경쟁사이용</div></div>
+      <div style="background:rgba(200,168,75,.25);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px">⭐</div><div style="font-size:11px;font-weight:700;margin-top:4px">관심고객</div></div>
+    </div>
+
+    <div style="font-size:10px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:8px">학습 현황</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center;cursor:pointer" onclick="openTMCallLogModal()"><div style="font-size:9.5px;color:#9db3d8">누적 통화</div><div style="font-size:20px;font-weight:900;margin-top:2px" id="tm-total-calls">—</div></div>
+      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center"><div style="font-size:9.5px;color:#9db3d8">학습 정확도</div><div style="font-size:20px;font-weight:900;margin-top:2px;color:#5FD68A">92.3%</div></div>
+      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center"><div style="font-size:9.5px;color:#9db3d8">추천 적중률</div><div style="font-size:20px;font-weight:900;margin-top:2px;color:#C8A84B">78.6%</div></div>
+    </div>
+  </div>
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px">
     <div class="kpi gold"><div class="kpi-lbl">⭐ 관심고객 전환율</div><div class="kpi-val" id="tm-interest-rate">—</div></div>
     <div class="kpi green"><div class="kpi-lbl">🏢 대면이관 건수</div><div class="kpi-val" id="tm-handoff-count">—</div></div>
   </div>
 
-  <div class="sec" style="margin-top:0">오늘 우선 전화할 기업 <span id="tm-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
+  <!-- 오늘 우선 연락 고객 히어로 카드 -->
+  <div id="tm-hero-card" style="display:none"></div>
+
+  <div class="sec">오늘 우선 전화할 기업 <span id="tm-total-badge" style="font-size:10px;color:var(--blue);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
   <div id="tm-call-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px">
     <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
   </div>
 
   <div class="sec">🔁 재접촉 대상 <span id="tm-followup-badge" style="font-size:10px;color:var(--warn);text-transform:none;letter-spacing:0;font-weight:700"></span></div>
-  <div style="font-size:11px;color:var(--text3);margin-bottom:12px">통화 결과를 남긴 기업 중 <b>수요없음</b>을 제외한 나머지는 여기서 관리하세요. 다시 통화하면 최신 결과로 갱신됩니다.</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:12px">통화 결과를 남긴 기업은 여기서 관리하세요. 다시 통화하면 최신 결과로 갱신됩니다.</div>
   <div id="tm-followup-list" style="display:flex;flex-direction:column;gap:10px">
     <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
   </div>
@@ -784,19 +811,13 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 
     <div style="background:linear-gradient(135deg,rgba(107,63,204,.06),rgba(26,111,232,.05));border:1.5px solid rgba(107,63,204,.2);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
       <h3 style="font-size:13px;font-weight:800;color:var(--purple);margin-bottom:6px">☎️ TM 모드</h3>
-      <p style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:10px">전화 영업(TM) 결과를 <b>표준 9개 코드</b>로만 기록하도록 강제해서, 담당자마다 기준이 달라지는 문제를 막습니다.</p>
+      <p style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:10px">전화 영업(TM) 결과를 <b>표준 3개 코드</b>로만 기록하도록 강제해서, 담당자마다 기준이 달라지는 문제를 막습니다.</p>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
-        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">📵 미수신</div>
         <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">🔁 재접촉필요</div>
-        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">🚫 수요없음</div>
         <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">⚔️ 경쟁사이용</div>
-        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">🌱 잠재수요</div>
         <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--gold);font-weight:700">⭐ 관심고객</div>
-        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px">📝 전환진행</div>
-        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--success);font-weight:700">✅ 성과발생</div>
-        <div style="background:var(--surface);border-radius:8px;padding:6px 8px;font-size:10.5px;color:var(--danger);font-weight:700">🏢 대면전환</div>
       </div>
-      <p style="font-size:11px;color:var(--text3);line-height:1.7">누적통화·관심고객전환율·대면이관건수를 상단 KPI로 집계하고, <b>누적통화 카드를 클릭</b>하면 전체 통화 이력을 팝업으로 볼 수 있습니다. 각 기업 카드에는 최근 통화결과가 색상 배지로 항상 표시됩니다.</p>
+      <p style="font-size:11px;color:var(--text3);line-height:1.7">상단에 통화결과 표준화 대시보드(학습정확도·추천적중률 등)와 <b>오늘 우선 연락 고객</b> 히어로카드가 표시됩니다. 통화결과를 기록하면 카드가 슬라이드아웃되며 "재접촉 대상" 섹션으로 이동하고, <b>관심고객</b>은 자동으로 대면영업 모드로 이관됩니다. 누적통화 카드를 클릭하면 전체 이력 팝업, 각 카드의 통화횟수 배지를 클릭하면 그 업체만의 이력을 볼 수 있습니다.</p>
     </div>
 
     <div style="background:linear-gradient(135deg,rgba(200,136,10,.06),rgba(26,111,232,.05));border:1.5px solid rgba(200,136,10,.2);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px">
@@ -943,6 +964,28 @@ function toggleTheme(){
 }
 
 // ═══ 탭 전환 ═══
+// ═══ 영업 모드 스위처 (대면영업 ↔ TM) ═══
+function setSalesMode(mode){
+  var btnOwner = document.getElementById('mode-btn-owner');
+  var btnTM    = document.getElementById('mode-btn-tm');
+  var navTM       = document.getElementById('nav-tm');
+  var navOwner    = document.getElementById('nav-owner');
+  var navPipeline = document.getElementById('nav-pipeline');
+  var navLeads    = document.getElementById('nav-leads');
+
+  if (mode==='tm') {
+    btnTM.classList.add('active'); btnOwner.classList.remove('active');
+    navTM.style.display=''; navOwner.style.display='none';
+    navPipeline.style.display='none'; navLeads.style.display='none';
+    showPage('tm', navTM);
+  } else {
+    btnOwner.classList.add('active'); btnTM.classList.remove('active');
+    navOwner.style.display=''; navTM.style.display='none';
+    navPipeline.style.display=''; navLeads.style.display='';
+    showPage('owner', navOwner);
+  }
+}
+
 function showPage(id,btn){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav').forEach(function(n){n.classList.remove('active');});
@@ -1507,7 +1550,7 @@ async function loadScsbidMiniStatus() {
   try {
     var snap = await db.collection('scsbidMeta').doc('main').get();
     if (!snap.exists) {
-      el.innerHTML = '⚠️ 낙찰DB 미구축 — <a href="#" onclick="showPage(&apos;settings&apos;,document.querySelectorAll(&apos;.nav&apos;)[6]);return false;" style="color:var(--danger)">설정에서 최초 학습 실행</a>';
+      el.innerHTML = '⚠️ 낙찰DB 미구축 — <a href="#" onclick="showPage(&apos;settings&apos;,document.getElementById(&apos;nav-settings&apos;));return false;" style="color:var(--danger)">설정에서 최초 학습 실행</a>';
       return;
     }
     var m = snap.data();
@@ -2567,7 +2610,7 @@ function updateDashBanner(leads) {
   d.innerHTML = '<span style="font-size:13px;font-weight:800;color:var(--blue)">🏆 최근 수집</span>' +
     '<span style="font-size:13px;color:var(--text2)">총 <b style="color:var(--text)">' + leads.length + '</b>개사</span>' +
     '<span class="grade gA">A</span><b style="color:var(--text)">' + aLen + '개사</b>' +
-    '<button class="btn btn-primary btn-sm" onclick="showPage(&apos;search&apos;,document.querySelectorAll(&apos;.nav&apos;)[0])">결과 보기 →</button>' +
+    '<button class="btn btn-primary btn-sm" onclick="showPage(&apos;search&apos;,document.getElementById(&apos;nav-search&apos;))">결과 보기 →</button>' +
     '<button onclick="clearSearchBanner()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;margin-left:auto">✕</button>';
   b.appendChild(d);
 }
@@ -2810,17 +2853,11 @@ function ownerAssignRow(docId, currentOwner){
 // ═══ TM 모드 — 통화결과 표준화 & 학습 ═══
 // ═══════════════════════════════════════════
 var TM_RESULT_CODES = [
-  { code:'미수신',       ico:'📵', color:'var(--text3)' },
   { code:'재접촉필요',   ico:'🔁', color:'var(--warn)' },
-  { code:'수요없음',     ico:'🚫', color:'var(--text3)' },
   { code:'경쟁사이용',   ico:'⚔️', color:'var(--text3)' },
-  { code:'잠재수요',     ico:'🌱', color:'var(--blue)' },
-  { code:'관심고객',     ico:'⭐', color:'var(--gold)' },
-  { code:'전환진행',     ico:'📝', color:'var(--purple)' },
-  { code:'성과발생',     ico:'✅', color:'var(--success)' },
-  { code:'대면전환',     ico:'🏢', color:'var(--danger)' }
+  { code:'관심고객',     ico:'⭐', color:'var(--gold)' }
 ];
-var TM_HANDOFF_CODES = ['관심고객','대면전환']; // 이 결과가 나오면 대면영업 모드로 자동 이관
+var TM_HANDOFF_CODES = ['관심고객']; // 이 결과가 나오면 대면영업 모드로 자동 이관
 
 async function loadTMPage(){
   try{
@@ -2843,22 +2880,19 @@ async function loadTMPage(){
     }
     _tmLogsByLead = logsByLead; // 팝업에서 재사용
 
-    // 분류: 수요없음(최근결과)=제외 / 통화이력 있음=재접촉 대상 / 이력 없음=오늘 우선 전화
+    // 분류: 통화이력 있음=재접촉 대상 / 이력 없음=오늘 우선 전화
     var todayList = [], followupList = [];
     candidates.forEach(function(l){
       var logs = logsByLead[l._id];
-      if (logs && logs.length) {
-        if (logs[0].resultCode === '수요없음') return; // 제외
-        followupList.push(l);
-      } else {
-        todayList.push(l);
-      }
+      if (logs && logs.length) followupList.push(l);
+      else todayList.push(l);
     });
 
     var badge = document.getElementById('tm-total-badge');
     if (badge) badge.textContent = todayList.length + '개사';
 
-    renderTMSection('tm-call-list', todayList, logsByLead, false);
+    renderTMHeroCard(todayList[0]);
+    renderTMSection('tm-call-list', todayList.slice(1), logsByLead, false);
     renderTMSection('tm-followup-list', followupList, logsByLead, true);
 
     var fuBadge = document.getElementById('tm-followup-badge');
@@ -2872,6 +2906,30 @@ async function loadTMPage(){
 }
 
 var _tmLogsByLead = {}; // 전체 통화이력 캐시 (팝업 등에서 재사용)
+
+function renderTMHeroCard(l){
+  var el = document.getElementById('tm-hero-card');
+  if (!el) return;
+  if (!l) { el.style.display='none'; return; }
+  el.style.display='';
+  el.innerHTML =
+    '<div style="background:linear-gradient(135deg,rgba(200,168,75,.08),rgba(26,111,232,.05));border:2px solid var(--gold);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:18px;position:relative;overflow:hidden">' +
+    '<div style="position:absolute;top:10px;right:14px;font-size:20px">⭐</div>' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:.5px;margin-bottom:8px">오늘 우선 연락 고객</div>' +
+    '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">' +
+      '<div style="width:52px;height:52px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0">'+l.score+'</div>' +
+      '<div style="flex:1;min-width:160px">' +
+        '<div style="font-size:15px;font-weight:900;color:var(--text)">'+escH(l.name||'')+'</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">🏢 '+escH((l.org||'—').slice(0,26))+' · '+ownerBadge(l.owner)+'</div>' +
+      '</div>' +
+      '<button class="btn btn-primary btn-sm" data-id="'+l._id+'" onclick="event.stopPropagation();qsReach(this)">📞 바로 연락하기 →</button>' +
+    '</div>' +
+    '<div style="display:flex;gap:16px;margin-top:12px;font-size:11.5px;color:var(--text2)">' +
+      '<div>🕐 추천 시간 <b style="color:var(--text)">'+tmSuggestTime(l)+'</b></div>' +
+      '<div>💬 추천 멘트 <b style="color:var(--text)">'+tmSuggestPoint(l)+'</b></div>' +
+    '</div>' +
+    '</div>';
+}
 
 function tmSuggestTime(l){
   if (l.closeDay!=null && l.closeDay<=7) return '오전 10:00 (마감임박 우선)';
@@ -2964,8 +3022,6 @@ async function saveTMLog(docId, code){
       }), 10000);
       refreshLocalAndPanel(docId, {status:'대면이관대기', tmHandoffReason: code});
       showToast('🏢 대면영업 모드로 자동 이관됨 (' + code + ')');
-    } else if (code === '수요없음') {
-      showToast('🚫 수요없음 — 목록에서 제외됩니다');
     } else {
       showToast('☎️ 통화결과 저장: ' + code + ' — 재접촉 대상으로 이동');
     }
@@ -3098,7 +3154,6 @@ function renderOwnerAssignList(all){
     el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><span class="ei">📭</span><div>저장된 기업이 없습니다</div></div>';
     return;
   }
-  // A/B등급 우선, TM에서 이관된 기업(대면이관대기)은 최상단
   var list = all.filter(function(l){ return l.grade==='A'||l.grade==='B'||l.status==='대면이관대기'; })
     .sort(function(a,b){
       var ah = a.status==='대면이관대기'?1:0, bh = b.status==='대면이관대기'?1:0;
@@ -3119,41 +3174,59 @@ function renderOwnerAssignList(all){
     return;
   }
 
+  // 근거 라벨 4종 고정 순서 (항상 이 순서로 표시, 해당 없으면 흐리게)
+  var REASON_ORDER = [
+    {label:'업종 적합', ico:'🏭'},
+    {label:'지역 동선', ico:'📍'},
+    {label:'기존 네트워크', ico:'🤝'},
+    {label:'업무량', ico:'📊'}
+  ];
+
   var html = '';
   list.forEach(function(l){
     var isHandoff = l.status==='대면이관대기';
     var fits = topFitReps(l, 2);
-    html += '<div style="background:var(--surface);border:1.5px solid '+(isHandoff?'rgba(200,136,10,.4)':'var(--border)')+';border-radius:var(--radius-lg);padding:14px 16px'+(isHandoff?';box-shadow:0 0 0 3px rgba(200,136,10,.08)':'')+'">';
 
-    // 헤더: 기업명 + 등급 + 현재 담당자
-    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
-    html += gb(l.grade);
-    html += '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--text)">'+escH(l.name||'')+(isHandoff?' <span style="font-size:9px;background:var(--gold);color:#fff;padding:2px 6px;border-radius:10px;font-weight:800;vertical-align:middle">TM이관</span>':'')+'</div><div style="font-size:10.5px;color:var(--text3)">🏢 '+escH((l.org||'—').slice(0,26))+' · 영업우선점수 '+l.score+'점 · '+(l.field||'기타')+'</div></div>';
-    html += ownerBadge(l.owner);
+    html += '<div style="background:linear-gradient(135deg,#0D1F4E,#16294f);border-radius:var(--radius-lg);padding:18px 20px;color:#fff;position:relative;overflow:hidden'+(isHandoff?';box-shadow:0 0 0 3px rgba(200,136,10,.5)':'')+'">';
+    if (isHandoff) html += '<div style="position:absolute;top:12px;right:14px;background:var(--gold);color:#0D1F4E;font-size:9px;font-weight:900;padding:3px 8px;border-radius:10px">TM 이관</div>';
+
+    html += '<div style="font-size:10px;color:#9db3d8;font-weight:700;margin-bottom:10px">🎯 대면영업 모드 추천 결과</div>';
+
+    // 기업 vs 기업 비교 카드 (담당자 후보 2명 = 기업 1개에 대한 두 후보라 레이아웃은 기업정보+2후보)
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">';
+    html += '<div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:16px">🏢</div>';
+    html += '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:900">'+escH(l.name||'')+'</div><div style="font-size:10.5px;color:#9db3d8">'+escH((l.org||'—').slice(0,26))+' · '+(l.field||'기타')+'</div></div>';
+    html += '<div style="text-align:right"><div style="font-size:9px;color:#9db3d8">영업우선점수</div><div style="display:flex;align-items:center;gap:6px"><span style="font-size:20px;font-weight:900">'+l.score+'점</span>'+gb(l.grade)+'</div></div>';
     html += '</div>';
 
-    // 추천 담당자 카드 2개 (적합도)
-    html += '<div style="font-size:9.5px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.5px">🎯 추천 담당자 (적합도 기준)</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+    // 담당자 후보 카드 2개 (가로 배치, 반짝이 아이콘)
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
     fits.forEach(function(f, fi){
       var isCur = (f.name === l.owner);
-      var col = fi===0 ? 'var(--success)' : 'var(--blue)';
-      html += '<div style="background:var(--surface2);border:1.5px solid '+(isCur?col:'var(--border)')+';border-radius:10px;padding:10px">';
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
-      html += '<span style="font-size:12px;font-weight:800;color:var(--text)">'+(fi===0?'🥇 ':'🥈 ')+f.name+'</span>';
-      html += '<span style="font-size:13px;font-weight:900;color:'+col+'">'+f.score+'점</span>';
-      html += '</div>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px">';
-      f.reasons.slice(0,2).forEach(function(r){
-        html += '<span style="font-size:9px;background:rgba(0,0,0,.04);color:var(--text2);padding:2px 6px;border-radius:8px">'+r.ico+' '+r.label+'</span>';
-      });
-      html += '</div>';
-      html += '<button class="btn '+(isCur?'btn-sec':'btn-primary')+' btn-xs" style="width:100%'+(isCur?';opacity:.4;pointer-events:none':'')+'" data-owner-doc="'+l._id+'" data-owner-name="'+f.name+'" onclick="assignOwnerClick(this)">'+(isCur?'✓ 배정됨':'이 담당자로 배정')+'</button>';
+      var accent = fi===0 ? '#5FD68A' : '#7BAAF7';
+      html += '<div style="background:rgba(255,255,255,.07);border:1.5px solid '+(isCur?accent:'rgba(255,255,255,.12)')+';border-radius:12px;padding:12px">';
+      html += '<div style="font-size:9px;color:#9db3d8;font-weight:700;margin-bottom:4px">담당자 추천</div>';
+      html += '<div style="font-size:14px;font-weight:900;margin-bottom:6px">'+f.name+'</div>';
+      html += '<div style="font-size:9.5px;color:#9db3d8;margin-bottom:2px">적합도</div>';
+      html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px"><span style="font-size:20px;font-weight:900;color:'+accent+'">'+f.score+'</span><span style="font-size:11px;color:'+accent+'">✨✨</span></div>';
+      html += '<button class="btn btn-sm" style="width:100%;background:'+(isCur?'rgba(255,255,255,.15)':accent)+';color:'+(isCur?'#fff':'#0D1F4E')+';border:none;font-weight:800'+(isCur?';pointer-events:none;opacity:.6':'')+'" data-owner-doc="'+l._id+'" data-owner-name="'+f.name+'" onclick="assignOwnerClick(this)">'+(isCur?'✓ 배정됨':'이 담당자로 배정')+'</button>';
       html += '</div>';
     });
     html += '</div>';
 
-    if (l.owner) html += '<button class="btn btn-sec btn-xs" data-owner-doc="'+l._id+'" data-owner-name="" onclick="assignOwnerClick(this)" style="color:var(--danger)">배정 해제</button>';
+    // 추천 근거 4개 아이콘 상시 표시 (이미지5 하단 스타일)
+    var topReasonLabels = (fits[0] && fits[0].reasons ? fits[0].reasons.map(function(r){return r.label;}) : []);
+    html += '<div style="font-size:9px;color:#9db3d8;font-weight:700;margin-bottom:6px">✔ 추천 근거</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
+    REASON_ORDER.forEach(function(r){
+      var hit = topReasonLabels.indexOf(r.label) >= 0;
+      html += '<div style="background:rgba(255,255,255,'+(hit?'.12':'.04')+');border-radius:8px;padding:8px 4px;text-align:center;opacity:'+(hit?'1':'.4')+'">';
+      html += '<div style="font-size:14px">'+r.ico+'</div><div style="font-size:8.5px;font-weight:700;margin-top:2px">'+r.label+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    if (l.owner) html += '<div style="margin-top:12px;text-align:right"><button class="btn btn-sec btn-xs" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2)" data-owner-doc="'+l._id+'" data-owner-name="" onclick="assignOwnerClick(this)">배정 해제</button></div>';
     html += '</div>';
   });
   el.innerHTML = html;
