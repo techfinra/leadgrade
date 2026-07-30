@@ -344,14 +344,20 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   </div>
   <div class="sb-label">Search</div>
   <button class="nav" id="nav-search" onclick="showPage(&apos;search&apos;,this)"><span class="nav-icon">🔍</span>잠재고객 발굴<span class="nav-badge" id="lead-badge">0</span></button>
-  <div class="sb-label">Intelligence</div>
+
+  <div class="sb-label">Intelligence (공통)</div>
   <button class="nav active" onclick="showPage(&apos;dashboard&apos;,this)"><span class="nav-icon">📊</span>대시보드</button>
   <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
-  <button class="nav" id="nav-tm" onclick="showPage(&apos;tm&apos;,this)" style="display:none"><span class="nav-icon">☎️</span>TM 대시보드</button>
-  <button class="nav" id="nav-tm-calls" onclick="showPage(&apos;tmcalls&apos;,this)" style="display:none"><span class="nav-icon">📞</span>TM 콜 리스트</button>
+
+  <div class="sb-label" id="sb-label-owner">Intelligence (대면)</div>
   <button class="nav" id="nav-owner" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">🏢</span>대면영업 대시보드</button>
   <button class="nav" id="nav-pipeline" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
   <button class="nav" id="nav-leads" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
+
+  <div class="sb-label" id="sb-label-tm" style="display:none">Intelligence (TM)</div>
+  <button class="nav" id="nav-tm" onclick="showPage(&apos;tm&apos;,this)" style="display:none"><span class="nav-icon">☎️</span>TM 대시보드</button>
+  <button class="nav" id="nav-tm-calls" onclick="showPage(&apos;tmcalls&apos;,this)" style="display:none"><span class="nav-icon">📞</span>TM 콜 리스트</button>
+
   <div class="sb-label">System</div>
   <button class="nav" id="nav-guide" onclick="showPage(&apos;guide&apos;,this)"><span class="nav-icon">📖</span>가이드</button>
   <button class="nav" id="nav-settings" onclick="showPage(&apos;settings&apos;,this)"><span class="nav-icon">⚙️</span>설정</button>
@@ -980,14 +986,18 @@ function setSalesMode(mode){
   var navOwner    = document.getElementById('nav-owner');
   var navPipeline = document.getElementById('nav-pipeline');
   var navLeads    = document.getElementById('nav-leads');
+  var labelOwner  = document.getElementById('sb-label-owner');
+  var labelTM     = document.getElementById('sb-label-tm');
 
   if (mode==='tm') {
     btnTM.classList.add('active'); btnOwner.classList.remove('active');
+    labelTM.style.display=''; labelOwner.style.display='none';
     navTM.style.display=''; navTMCalls.style.display=''; navOwner.style.display='none';
     navPipeline.style.display='none'; navLeads.style.display='none';
     showPage('tm', navTM);
   } else {
     btnOwner.classList.add('active'); btnTM.classList.remove('active');
+    labelOwner.style.display=''; labelTM.style.display='none';
     navOwner.style.display=''; navTM.style.display='none'; navTMCalls.style.display='none';
     navPipeline.style.display=''; navLeads.style.display='';
     showPage('owner', navOwner);
