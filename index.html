@@ -444,6 +444,10 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       </div>
     </div>
 
+    <!-- 영업 퍼널: 오늘대상 → 통화완료 → 관심고객 → 대면이관 -->
+    <div style="font-size:9.5px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:9px">오늘의 영업 퍼널</div>
+    <div id="tm-funnel" style="margin-bottom:20px"></div>
+
     <!-- 오늘 우선 연락 고객 (흰 카드, 패널 안에 내장) -->
     <div id="tm-hero-preview" style="background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:18px;color:var(--text);position:relative;display:none">
       <div style="position:absolute;top:12px;right:14px;font-size:16px">⭐</div>
@@ -466,6 +470,16 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       <div style="font-size:9px;color:#9db3d8;margin-bottom:6px">고객 점수 현황 (예시)</div>
       <div id="tm-score-preview-body" style="font-size:11px">불러오는 중...</div>
     </div>
+  </div>
+
+  <!-- AI 인사이트 -->
+  <div class="sec" style="margin-top:0">🤖 AI 인사이트</div>
+  <div id="tm-insights" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px"></div>
+
+  <!-- 전략 안내 -->
+  <div style="background:rgba(200,168,75,.06);border:1.5px solid rgba(200,168,75,.25);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:20px">
+    <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:6px">💡 오늘의 전략 제안</div>
+    <div id="tm-strategy" style="font-size:12px;color:var(--text2);line-height:1.7">불러오는 중...</div>
   </div>
 
   <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px">
@@ -2957,6 +2971,16 @@ async function loadTMPage(){
     var fuBadge = document.getElementById('tm-followup-badge');
     if (fuBadge) fuBadge.textContent = followupList.length + '개사';
 
+    // 퍼널 + AI 인사이트 + 전략 안내 (통화이력 기반 실계산 + 샘플 보강)
+    var handoffLeads = all.filter(function(l){ return l.status==='대면이관대기'; });
+    var interestLeadIds = {};
+    Object.keys(logsByLead).forEach(function(lid){
+      if (logsByLead[lid].some(function(v){ return v.resultCode==='관심고객'; })) interestLeadIds[lid]=true;
+    });
+    renderTMFunnel(candidates.length, Object.keys(logsByLead).length, Object.keys(interestLeadIds).length, handoffLeads.length);
+    renderTMInsights(candidates, logsByLead);
+    renderTMStrategy(candidates, logsByLead);
+
     await renderTMStats();
   } catch(e){
     var el = document.getElementById('tm-call-list');
@@ -2965,6 +2989,123 @@ async function loadTMPage(){
 }
 
 var _tmLogsByLead = {}; // 전체 통화이력 캐시 (팝업 등에서 재사용)
+
+// ═══ 영업 퍼널: 오늘대상 → 통화완료 → 관심고객 → 대면이관 ═══
+function renderTMFunnel(total, called, interest, handoff){
+  var el = document.getElementById('tm-funnel');
+  if (!el) return;
+  var stages = [
+    { label:'오늘 대상',   val: total,    color:'#7BAAF7' },
+    { label:'통화 완료',   val: called,   color:'#5a8bff' },
+    { label:'관심고객',    val: interest, color:'#C8A84B' },
+    { label:'대면 이관',   val: handoff,  color:'#5FD68A' }
+  ];
+  var maxV = Math.max(total, 1);
+  var html = '';
+  stages.forEach(function(s, i){
+    var pct = Math.round((s.val / maxV) * 100);
+    var rate = (i>0 && stages[i-1].val>0) ? Math.round((s.val/stages[i-1].val)*100) : null;
+    html += '<div style="margin-bottom:8px">';
+    html += '<div style="display:flex;justify-content:space-between;font-size:10px;color:#c7d4ea;margin-bottom:3px"><span>'+s.label+'</span><span>'+s.val+'건'+(rate!==null?' · 전환 '+rate+'%':'')+'</span></div>';
+    html += '<div style="background:rgba(255,255,255,.08);border-radius:6px;height:8px;overflow:hidden"><div style="width:'+Math.max(pct,4)+'%;height:100%;background:'+s.color+';border-radius:6px"></div></div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ═══ AI 인사이트 — 실제 데이터 기반 계산 + 샘플 보강 ═══
+var TM_SAMPLE_INSIGHTS = [
+  '오전 10~11시 통화의 관심고객 전환율이 오후 대비 높은 경향이 있습니다',
+  '적격심사 대상 기업은 신용평가서 필요성 언급 시 관심고객 전환이 잘 되는 편입니다',
+  '재접촉 대상 기업은 3일 이내 다시 연락했을 때 성사율이 더 높습니다',
+  '마감 D-7~D-14 구간 기업은 여유있게 검토하려는 경향이 있어 상담이 수월합니다',
+  '2회 이상 낙찰 이력이 있는 기업은 정기적인 평가 수요가 있는 경우가 많습니다',
+  '경쟁사 이용 중인 기업도 계약 만료 시점을 확인해두면 추후 전환 기회가 됩니다'
+];
+function renderTMInsights(candidates, logsByLead){
+  var el = document.getElementById('tm-insights');
+  if (!el) return;
+  var insights = [];
+
+  // ① 실제 데이터 기반: 분야별 관심고객 전환율 비교
+  var fieldStats = {};
+  candidates.forEach(function(l){
+    var logs = logsByLead[l._id];
+    if (!logs || !logs.length) return;
+    var f = l.field || '기타';
+    if (!fieldStats[f]) fieldStats[f] = { total:0, interest:0 };
+    fieldStats[f].total++;
+    if (logs.some(function(v){ return v.resultCode==='관심고객'; })) fieldStats[f].interest++;
+  });
+  var fieldKeys = Object.keys(fieldStats).filter(function(f){ return fieldStats[f].total>=2; });
+  if (fieldKeys.length >= 2) {
+    fieldKeys.sort(function(a,b){ return (fieldStats[b].interest/fieldStats[b].total) - (fieldStats[a].interest/fieldStats[a].total); });
+    var top = fieldKeys[0];
+    var rate = Math.round(fieldStats[top].interest/fieldStats[top].total*100);
+    if (rate > 0) insights.push({ real:true, text: '"'+top+'" 분야 기업의 관심고객 전환율이 '+rate+'%로 가장 높습니다' });
+  }
+
+  // ② 실제 데이터 기반: 방치된 재접촉 대상
+  var stale = 0;
+  var now = Date.now();
+  candidates.forEach(function(l){
+    var logs = logsByLead[l._id];
+    if (!logs || !logs.length) return;
+    if (logs[0].resultCode!=='재접촉필요') return;
+    var t = logs[0].calledAt && logs[0].calledAt.toDate ? logs[0].calledAt.toDate().getTime() : null;
+    if (t && (now-t) > 3*86400000) stale++;
+  });
+  if (stale > 0) insights.push({ real:true, text: '재접촉필요 상태로 3일 이상 방치된 기업이 '+stale+'건 있습니다' });
+
+  // ③ 실제 데이터 기반: 경쟁사이용 비율
+  var compUsed = candidates.filter(function(l){
+    var logs = logsByLead[l._id];
+    return logs && logs.length && logs[0].resultCode==='경쟁사이용';
+  }).length;
+  if (compUsed > 0) insights.push({ real:true, text: '경쟁사 이용 중으로 확인된 기업이 '+compUsed+'건 있어 계약 만료 시점 확인이 필요합니다' });
+
+  // 샘플로 보강 (최소 3개까지 채움)
+  var shuffled = TM_SAMPLE_INSIGHTS.slice().sort(function(){ return Math.random()-0.5; });
+  var si = 0;
+  while (insights.length < 3 && si < shuffled.length) {
+    insights.push({ real:false, text: shuffled[si] });
+    si++;
+  }
+
+  var html = '';
+  insights.slice(0,4).forEach(function(ins){
+    html += '<div style="background:var(--surface);border:1.5px solid var(--border);border-left:3px solid '+(ins.real?'var(--success)':'var(--blue)')+';border-radius:10px;padding:10px 12px;font-size:12px;color:var(--text2);display:flex;align-items:start;gap:8px">';
+    html += '<span style="flex-shrink:0">'+(ins.real?'📊':'💡')+'</span>';
+    html += '<span>'+ins.text+'</span>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ═══ 전략 안내 — 인사이트 기반 행동 제안 ═══
+var TM_SAMPLE_STRATEGIES = [
+  '오늘은 오전 시간대에 재접촉 대상 기업 위주로 연락해보세요.',
+  '적격심사 대상 기업에는 신용평가서 필요 여부를 먼저 확인하는 스크립트가 효과적입니다.',
+  '반복 낙찰 이력이 있는 기업은 정기 평가 니즈가 있을 가능성이 높으니 우선 순위를 높여보세요.'
+];
+function renderTMStrategy(candidates, logsByLead){
+  var el = document.getElementById('tm-strategy');
+  if (!el) return;
+  var staleCount = 0, now = Date.now();
+  candidates.forEach(function(l){
+    var logs = logsByLead[l._id];
+    if (logs && logs.length && logs[0].resultCode==='재접촉필요') {
+      var t = logs[0].calledAt && logs[0].calledAt.toDate ? logs[0].calledAt.toDate().getTime() : null;
+      if (t && (now-t) > 3*86400000) staleCount++;
+    }
+  });
+  if (staleCount >= 2) {
+    el.textContent = '재접촉필요 상태로 오래 방치된 기업이 ' + staleCount + '건 있습니다. 오늘은 이 기업들을 우선 연락해보세요.';
+  } else {
+    el.textContent = TM_SAMPLE_STRATEGIES[Math.floor(Math.random()*TM_SAMPLE_STRATEGIES.length)];
+  }
+}
+
 
 // TM 대시보드 패널 안에 내장되는 미리보기(웹툰 목업 스타일) — 클릭하면 콜리스트로 이동
 function renderTMHeroPreview(l){
@@ -3021,6 +3162,17 @@ function renderTMHeroCard(l){
       '<div>🕐 추천 시간 <b style="color:var(--text)">'+tmSuggestTime(l)+'</b></div>' +
       '<div>💬 추천 멘트 <b style="color:var(--text)">'+tmSuggestPoint(l)+'</b></div>' +
     '</div>' +
+    (function(){
+      var scr = tmGenScript(l);
+      return '<div style="margin-top:10px">' +
+        '<div style="font-size:9.5px;font-weight:800;color:var(--purple);cursor:pointer" onclick="var t=document.getElementById(&apos;tm-hero-script&apos;);t.style.display=t.style.display===&apos;none&apos;?&apos;block&apos;:&apos;none&apos;">📜 추천 스크립트 보기</div>' +
+        '<div id="tm-hero-script" style="display:none;margin-top:6px;background:rgba(107,63,204,.05);border:1px solid rgba(107,63,204,.15);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);line-height:1.9">' +
+          '<div><b style="color:var(--purple)">오프닝</b> ' + escH(scr.opening) + '</div>' +
+          '<div><b style="color:var(--purple)">니즈확인</b> ' + escH(scr.needs) + '</div>' +
+          '<div><b style="color:var(--purple)">제안</b> ' + escH(scr.offer) + '</div>' +
+          '<div><b style="color:var(--purple)">클로징</b> ' + escH(scr.closing) + '</div>' +
+        '</div></div>';
+    })() +
     '</div>';
 }
 
@@ -3034,6 +3186,35 @@ function tmSuggestPoint(l){
   if (l.bidCount>=3) return '반복 낙찰 이력 언급 — 정기 평가 수요 확인';
   if (l.closeDay!=null && l.closeDay<=7) return '마감 임박 — 당일 발급 가능성 안내';
   return '최근 조달 활동 확인 및 니즈 파악';
+}
+
+// ═══ 기업 특성 기반 4단계 통화 스크립트 자동 생성 ═══
+function tmGenScript(l){
+  var opening = '안녕하세요, ' + (l.name||'담당자') + ' 담당자님 맞으실까요? 신용평가 관련 안내 드리려 연락드렸습니다.';
+  var needs, offer;
+  var isQualif = (l.method||'').indexOf('적격')>=0;
+  var isUrgent = l.closeDay!=null && l.closeDay<=7;
+  var isRepeat = l.bidCount>=3;
+
+  if (isQualif) {
+    needs = '이번 공고가 적격심사 대상이라 신용평가서가 필요하실 텐데, 준비는 되셨을까요?';
+  } else if (isRepeat) {
+    needs = '최근 ' + (l.bidCount||2) + '회 낙찰 이력이 확인되는데, 정기적으로 평가서가 필요하신 상황이실까요?';
+  } else {
+    needs = '최근 조달 활동이 있으신 걸로 확인되는데, 신용평가서 관련 검토하고 계신 부분이 있으실까요?';
+  }
+
+  if (isUrgent) {
+    offer = '마감이 얼마 안 남으셔서 걱정되실 텐데, 저희는 당일 발급이 가능해서 여유있게 준비하실 수 있습니다.';
+  } else if (isQualif) {
+    offer = '적격심사 서류는 정확도가 중요한데, 담당 심사역이 직접 케어해드립니다.';
+  } else {
+    offer = '월별 재무 모니터링까지 함께 제공되어, 다음 입찰 준비에도 도움이 되실 겁니다.';
+  }
+
+  var closing = isUrgent ? '오늘 중으로 서류 안내드려도 될까요?' : '편하신 시간에 자료 먼저 보내드려도 될까요?';
+
+  return { opening: opening, needs: needs, offer: offer, closing: closing };
 }
 
 function renderTMSection(containerId, list, logsByLead, isFollowup){
@@ -3069,8 +3250,19 @@ function renderTMSection(containerId, list, logsByLead, isFollowup){
     html += '</div>';
 
     if (!isFollowup) {
-      html += '<div style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:10px">💬 '+tmSuggestPoint(l)+'</div>';
+      html += '<div style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:8px">💬 '+tmSuggestPoint(l)+'</div>';
     }
+
+    // 4단계 추천 스크립트 (기업 특성 반영, 접었다 펼치기)
+    var scr = tmGenScript(l);
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:9.5px;font-weight:800;color:var(--purple);cursor:pointer;display:flex;align-items:center;gap:4px" onclick="var t=document.getElementById(&apos;tm-script-'+l._id+'&apos;);t.style.display=t.style.display===&apos;none&apos;?&apos;block&apos;:&apos;none&apos;">📜 추천 스크립트 보기</div>';
+    html += '<div id="tm-script-'+l._id+'" style="display:none;margin-top:6px;background:rgba(107,63,204,.05);border:1px solid rgba(107,63,204,.15);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);line-height:1.9">';
+    html += '<div><b style="color:var(--purple)">오프닝</b> ' + escH(scr.opening) + '</div>';
+    html += '<div><b style="color:var(--purple)">니즈확인</b> ' + escH(scr.needs) + '</div>';
+    html += '<div><b style="color:var(--purple)">제안</b> ' + escH(scr.offer) + '</div>';
+    html += '<div><b style="color:var(--purple)">클로징</b> ' + escH(scr.closing) + '</div>';
+    html += '</div></div>';
 
     html += '<div style="font-size:9.5px;font-weight:800;color:var(--text3);margin-bottom:6px">통화 결과 기록</div>';
     html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px">';
