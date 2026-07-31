@@ -350,7 +350,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <button class="nav" onclick="showPage(&apos;today&apos;,this)"><span class="nav-icon">🎯</span>오늘의 영업<span class="nav-badge" id="today-badge">0</span></button>
 
   <div class="sb-label" id="sb-label-owner">Intelligence (대면)</div>
-  <button class="nav" id="nav-owner" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">🏢</span>대면영업 대시보드</button>
+  <button class="nav" id="nav-owner" onclick="showPage(&apos;owner&apos;,this)"><span class="nav-icon">🏢</span>담당자 배정</button>
   <button class="nav" id="nav-pipeline" onclick="showPage(&apos;pipeline&apos;,this)"><span class="nav-icon">📋</span>영업 파이프라인</button>
   <button class="nav" id="nav-leads" onclick="showPage(&apos;leads&apos;,this)"><span class="nav-icon">⭐</span>영업 리스트<span class="nav-badge red" id="followup-badge" style="display:none">!</span></button>
 
@@ -495,7 +495,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 </div>
 
 <div class="page" id="page-owner">
-  <div class="sec">🏢 대면영업 모드</div>
+  <div class="sec">🏢 담당자 배정</div>
   <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">🎯 적합도 매칭</span>기업의 영업우선점수와 <b>담당자 적합도는 서로 다른 판단</b>입니다. 업종·지역·네트워크·업무량 4가지 기준으로 각 기업에 가장 잘 맞는 담당자를 추천합니다.</div>
 
   <div id="tm-handoff-banner" style="display:none"></div>
@@ -3258,7 +3258,7 @@ function renderOwnerAssignList(all){
   if (banner) {
     if (handoffCount>0) {
       banner.style.display='';
-      banner.innerHTML = '<div style="background:rgba(200,136,10,.1);border:1.5px solid rgba(200,136,10,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#7a6423">☎️→🏢 TM 모드에서 <b>'+handoffCount+'건</b>이 대면영업 이관 대기 중입니다 (아래 목록 상단 강조 표시)</div>';
+      banner.innerHTML = '<div style="background:rgba(200,136,10,.08);border:1.5px solid rgba(200,136,10,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#7a6423">☎️→🏢 TM 모드에서 <b>'+handoffCount+'건</b>이 배정 대기 중입니다 (아래 목록 상단 강조 표시)</div>';
     } else banner.style.display='none';
   }
 
@@ -3267,7 +3267,6 @@ function renderOwnerAssignList(all){
     return;
   }
 
-  // 근거 라벨 4종 고정 순서 (항상 이 순서로 표시, 해당 없으면 흐리게)
   var REASON_ORDER = [
     {label:'업종 적합', ico:'🏭'},
     {label:'지역 동선', ico:'📍'},
@@ -3280,46 +3279,44 @@ function renderOwnerAssignList(all){
     var isHandoff = l.status==='대면이관대기';
     var fits = topFitReps(l, 2);
 
-    html += '<div style="background:linear-gradient(135deg,#0D1F4E,#16294f);border-radius:var(--radius-lg);padding:18px 20px;color:#fff;position:relative;overflow:hidden'+(isHandoff?';box-shadow:0 0 0 3px rgba(200,136,10,.5)':'')+'">';
-    if (isHandoff) html += '<div style="position:absolute;top:12px;right:14px;background:var(--gold);color:#0D1F4E;font-size:9px;font-weight:900;padding:3px 8px;border-radius:10px">TM 이관</div>';
+    html += '<div style="background:var(--surface);border:1.5px solid '+(isHandoff?'var(--gold)':'var(--border)')+';border-radius:var(--radius-lg);padding:18px 20px'+(isHandoff?';box-shadow:0 0 0 3px rgba(200,168,75,.15)':'')+'">';
+    if (isHandoff) html += '<div style="display:inline-block;background:var(--gold);color:#fff;font-size:9px;font-weight:900;padding:3px 9px;border-radius:10px;margin-bottom:10px">☎️→🏢 TM 이관</div>';
 
-    html += '<div style="font-size:10px;color:#9db3d8;font-weight:700;margin-bottom:10px">🎯 대면영업 모드 추천 결과</div>';
-
-    // 기업 vs 기업 비교 카드 (담당자 후보 2명 = 기업 1개에 대한 두 후보라 레이아웃은 기업정보+2후보)
-    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">';
-    html += '<div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:16px">🏢</div>';
-    html += '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:900">'+escH(l.name||'')+'</div><div style="font-size:10.5px;color:#9db3d8">'+escH((l.org||'—').slice(0,26))+' · '+(l.field||'기타')+'</div></div>';
-    html += '<div style="text-align:right"><div style="font-size:9px;color:#9db3d8">영업우선점수</div><div style="display:flex;align-items:center;gap:6px"><span style="font-size:20px;font-weight:900">'+l.score+'점</span>'+gb(l.grade)+'</div></div>';
+    // 기업 헤더
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">';
+    html += '<div style="width:38px;height:38px;border-radius:10px;background:rgba(26,111,232,.08);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🏢</div>';
+    html += '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:900;color:var(--text)">'+escH(l.name||'')+'</div><div style="font-size:10.5px;color:var(--text3)">'+escH((l.org||'—').slice(0,26))+' · '+(l.field||'기타')+'</div></div>';
+    html += '<div style="text-align:right;flex-shrink:0"><div style="font-size:9px;color:var(--text3)">영업우선점수</div><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><span style="font-size:20px;font-weight:900;color:var(--text)">'+l.score+'점</span>'+gb(l.grade)+'</div></div>';
     html += '</div>';
 
-    // 담당자 후보 카드 2개 (가로 배치, 반짝이 아이콘)
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+    // 담당자 후보 카드 2개
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
     fits.forEach(function(f, fi){
       var isCur = (f.name === l.owner);
-      var accent = fi===0 ? '#5FD68A' : '#7BAAF7';
-      html += '<div style="background:rgba(255,255,255,.07);border:1.5px solid '+(isCur?accent:'rgba(255,255,255,.12)')+';border-radius:12px;padding:12px">';
-      html += '<div style="font-size:9px;color:#9db3d8;font-weight:700;margin-bottom:4px">담당자 추천</div>';
-      html += '<div style="font-size:14px;font-weight:900;margin-bottom:6px">'+f.name+'</div>';
-      html += '<div style="font-size:9.5px;color:#9db3d8;margin-bottom:2px">적합도</div>';
+      var accent = fi===0 ? 'var(--success)' : 'var(--blue)';
+      html += '<div style="background:var(--surface2);border:1.5px solid '+(isCur?accent:'var(--border)')+';border-radius:12px;padding:12px">';
+      html += '<div style="font-size:9px;color:var(--text3);font-weight:700;margin-bottom:4px">담당자 추천</div>';
+      html += '<div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:6px">'+f.name+'</div>';
+      html += '<div style="font-size:9.5px;color:var(--text3);margin-bottom:2px">적합도</div>';
       html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px"><span style="font-size:20px;font-weight:900;color:'+accent+'">'+f.score+'</span><span style="font-size:11px;color:'+accent+'">✨✨</span></div>';
-      html += '<button class="btn btn-sm" style="width:100%;background:'+(isCur?'rgba(255,255,255,.15)':accent)+';color:'+(isCur?'#fff':'#0D1F4E')+';border:none;font-weight:800'+(isCur?';pointer-events:none;opacity:.6':'')+'" data-owner-doc="'+l._id+'" data-owner-name="'+f.name+'" onclick="assignOwnerClick(this)">'+(isCur?'✓ 배정됨':'이 담당자로 배정')+'</button>';
+      html += '<button class="btn btn-sm" style="width:100%;'+(isCur?'background:var(--surface);color:'+accent+';border:1.5px solid '+accent+';pointer-events:none':'background:'+accent+';color:#fff;border:none')+';font-weight:800" data-owner-doc="'+l._id+'" data-owner-name="'+f.name+'" onclick="assignOwnerClick(this)">'+(isCur?'✓ 배정됨':'이 담당자로 배정')+'</button>';
       html += '</div>';
     });
     html += '</div>';
 
-    // 추천 근거 4개 아이콘 상시 표시 (이미지5 하단 스타일)
+    // 추천 근거 4개 아이콘
     var topReasonLabels = (fits[0] && fits[0].reasons ? fits[0].reasons.map(function(r){return r.label;}) : []);
-    html += '<div style="font-size:9px;color:#9db3d8;font-weight:700;margin-bottom:6px">✔ 추천 근거</div>';
+    html += '<div style="font-size:9px;color:var(--text3);font-weight:700;margin-bottom:6px">✔ 추천 근거</div>';
     html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
     REASON_ORDER.forEach(function(r){
       var hit = topReasonLabels.indexOf(r.label) >= 0;
-      html += '<div style="background:rgba(255,255,255,'+(hit?'.12':'.04')+');border-radius:8px;padding:8px 4px;text-align:center;opacity:'+(hit?'1':'.4')+'">';
-      html += '<div style="font-size:14px">'+r.ico+'</div><div style="font-size:8.5px;font-weight:700;margin-top:2px">'+r.label+'</div>';
+      html += '<div style="background:'+(hit?'rgba(26,111,232,.07)':'var(--surface2)')+';border-radius:8px;padding:8px 4px;text-align:center;opacity:'+(hit?'1':'.45')+'">';
+      html += '<div style="font-size:14px">'+r.ico+'</div><div style="font-size:8.5px;font-weight:700;margin-top:2px;color:var(--text2)">'+r.label+'</div>';
       html += '</div>';
     });
     html += '</div>';
 
-    if (l.owner) html += '<div style="margin-top:12px;text-align:right"><button class="btn btn-sec btn-xs" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2)" data-owner-doc="'+l._id+'" data-owner-name="" onclick="assignOwnerClick(this)">배정 해제</button></div>';
+    if (l.owner) html += '<div style="margin-top:12px;text-align:right"><button class="btn btn-sec btn-xs" data-owner-doc="'+l._id+'" data-owner-name="" onclick="assignOwnerClick(this)" style="color:var(--danger)">배정 해제</button></div>';
     html += '</div>';
   });
   el.innerHTML = html;
