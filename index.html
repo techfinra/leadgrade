@@ -411,22 +411,60 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 <div class="page" id="page-tm">
   <div class="sec">☎️ TM 모드</div>
 
-  <!-- TM 대시보드: 통화결과 표준화 & 학습 -->
-  <div style="background:linear-gradient(135deg,#0D1F4E,#1a3570);border-radius:var(--radius-lg);padding:20px 22px;margin-bottom:20px;color:#fff">
-    <div style="font-size:13px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">🤖</span>TM 통화 결과 표준화 & 학습</div>
-
-    <div style="font-size:10px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:8px">통화 결과 분류 (표준화)</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">
-      <div style="background:rgba(179,92,0,.25);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px">🔁</div><div style="font-size:11px;font-weight:700;margin-top:4px">재접촉필요</div></div>
-      <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px">⚔️</div><div style="font-size:11px;font-weight:700;margin-top:4px">경쟁사이용</div></div>
-      <div style="background:rgba(200,168,75,.25);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px">⭐</div><div style="font-size:11px;font-weight:700;margin-top:4px">관심고객</div></div>
+  <!-- TM 대시보드: 통화결과 표준화 & 학습 (웹툰 목업 재현) -->
+  <div style="background:linear-gradient(135deg,#0D1F4E,#132a5c);border-radius:18px;padding:22px 24px;margin-bottom:20px;color:#fff;box-shadow:0 8px 30px rgba(13,31,78,.25)">
+    <div style="font-size:14px;font-weight:900;margin-bottom:16px;display:flex;align-items:center;gap:9px">
+      <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#3b6fe0,#5a8bff);display:flex;align-items:center;justify-content:center;font-size:15px">🤖</span>
+      TM 통화 결과 표준화 & 학습 대시보드
     </div>
 
-    <div style="font-size:10px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:8px">학습 현황</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center;cursor:pointer" onclick="openTMCallLogModal()"><div style="font-size:9.5px;color:#9db3d8">누적 통화</div><div style="font-size:20px;font-weight:900;margin-top:2px" id="tm-total-calls">—</div></div>
-      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center"><div style="font-size:9.5px;color:#9db3d8">학습 정확도</div><div style="font-size:20px;font-weight:900;margin-top:2px;color:#5FD68A">92.3%</div></div>
-      <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;text-align:center"><div style="font-size:9.5px;color:#9db3d8">추천 적중률</div><div style="font-size:20px;font-weight:900;margin-top:2px;color:#C8A84B">78.6%</div></div>
+    <div style="font-size:9.5px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:9px">통화 결과 분류 (표준화)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:20px">
+      <div style="background:rgba(217,89,50,.28);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px">🔁</div><div style="font-size:11px;font-weight:800;margin-top:6px">재접촉필요</div></div>
+      <div style="background:rgba(107,63,204,.28);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px">⚔️</div><div style="font-size:11px;font-weight:800;margin-top:6px">경쟁사이용</div></div>
+      <div style="background:rgba(200,168,75,.30);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px">⭐</div><div style="font-size:11px;font-weight:800;margin-top:6px">관심고객</div></div>
+    </div>
+
+    <div style="font-size:9.5px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:9px">학습 현황</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:20px">
+      <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer" onclick="openTMCallLogModal()">
+        <div style="font-size:9.5px;color:#9db3d8">누적 통화</div>
+        <div style="font-size:22px;font-weight:900;margin-top:3px" id="tm-total-calls">—</div>
+        <div style="font-size:9px;color:#7BAAF7;margin-top:2px">건</div>
+      </div>
+      <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:14px 8px;text-align:center">
+        <div style="font-size:9.5px;color:#9db3d8">학습 정확도</div>
+        <div style="font-size:22px;font-weight:900;margin-top:3px;color:#5FD68A">92.3%</div>
+        <div style="font-size:9px;color:#5FD68A;margin-top:2px">▲ 상승중</div>
+      </div>
+      <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:14px 8px;text-align:center">
+        <div style="font-size:9.5px;color:#9db3d8">추천 적중률</div>
+        <div style="font-size:22px;font-weight:900;margin-top:3px;color:#C8A84B">78.6%</div>
+        <div style="font-size:9px;color:#C8A84B;margin-top:2px">▲ 상승중</div>
+      </div>
+    </div>
+
+    <!-- 오늘 우선 연락 고객 (흰 카드, 패널 안에 내장) -->
+    <div id="tm-hero-preview" style="background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:18px;color:var(--text);position:relative;display:none">
+      <div style="position:absolute;top:12px;right:14px;font-size:16px">⭐</div>
+      <div style="font-size:10px;font-weight:800;color:var(--text3);margin-bottom:8px">오늘 우선 연락 고객</div>
+      <div id="tm-hero-preview-body"></div>
+    </div>
+
+    <!-- 학습 흐름 다이어그램 -->
+    <div style="font-size:9.5px;font-weight:800;color:#9db3d8;letter-spacing:.5px;margin-bottom:10px">TM 결과가 쌓일수록 추천은 더 똑똑해진다</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="text-align:center;flex:1;min-width:70px"><div style="font-size:18px">☎️</div><div style="font-size:8.5px;color:#9db3d8;margin-top:3px">TM 통화결과</div></div>
+      <div style="color:#5a8bff;font-size:14px">→</div>
+      <div style="text-align:center;flex:1;min-width:70px"><div style="font-size:18px">🧠</div><div style="font-size:8.5px;color:#9db3d8;margin-top:3px">AI 학습·분석</div></div>
+      <div style="color:#5a8bff;font-size:14px">→</div>
+      <div style="text-align:center;flex:1;min-width:70px"><div style="font-size:18px">📈</div><div style="font-size:8.5px;color:#9db3d8;margin-top:3px">고객점수 업데이트</div></div>
+      <div style="color:#5a8bff;font-size:14px">→</div>
+      <div style="text-align:center;flex:1;min-width:70px"><div style="font-size:18px">✅</div><div style="font-size:8.5px;color:#9db3d8;margin-top:3px">추천 품질 향상</div></div>
+    </div>
+    <div id="tm-score-preview" style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px 12px">
+      <div style="font-size:9px;color:#9db3d8;margin-bottom:6px">고객 점수 현황 (예시)</div>
+      <div id="tm-score-preview-body" style="font-size:11px">불러오는 중...</div>
     </div>
   </div>
 
@@ -2911,6 +2949,8 @@ async function loadTMPage(){
     if (badge) badge.textContent = todayList.length + '개사';
 
     renderTMHeroCard(todayList[0]);
+    renderTMHeroPreview(todayList[0]);
+    renderTMScorePreview(todayList.slice(0,3));
     renderTMSection('tm-call-list', todayList.slice(1), logsByLead, false);
     renderTMSection('tm-followup-list', followupList, logsByLead, true);
 
@@ -2925,6 +2965,40 @@ async function loadTMPage(){
 }
 
 var _tmLogsByLead = {}; // 전체 통화이력 캐시 (팝업 등에서 재사용)
+
+// TM 대시보드 패널 안에 내장되는 미리보기(웹툰 목업 스타일) — 클릭하면 콜리스트로 이동
+function renderTMHeroPreview(l){
+  var wrap = document.getElementById('tm-hero-preview');
+  var body = document.getElementById('tm-hero-preview-body');
+  if (!wrap || !body) return;
+  if (!l) { wrap.style.display='none'; return; }
+  wrap.style.display='';
+  body.innerHTML =
+    '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">' +
+      '<div style="font-size:14px;font-weight:900;flex:1;min-width:100px">'+escH(l.name||'')+'</div>' +
+      '<div style="width:44px;height:44px;border-radius:50%;background:var(--success);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0">'+l.score+'점</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--text2);flex-wrap:wrap">' +
+      '<div>🕐 추천 시간 <b>'+tmSuggestTime(l)+'</b></div>' +
+      '<div>💬 '+tmSuggestPoint(l)+'</div>' +
+    '</div>' +
+    '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:10px;background:var(--success);color:#fff;border:none;font-weight:800" onclick="setSalesMode(&apos;tm&apos;);showPage(&apos;tmcalls&apos;,document.getElementById(&apos;nav-tm-calls&apos;))">바로 연락하기 →</button>';
+}
+
+// 학습 흐름 다이어그램 하단 — 상위 3개사 현재 점수 예시 표시
+function renderTMScorePreview(list){
+  var el = document.getElementById('tm-score-preview-body');
+  if (!el) return;
+  if (!list || !list.length) { el.innerHTML = '<span style="color:#9db3d8">표시할 데이터가 없습니다</span>'; return; }
+  var html = '';
+  list.forEach(function(l){
+    html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.08)">';
+    html += '<span>'+escH((l.name||'').slice(0,18))+'</span>';
+    html += '<span style="font-weight:800;color:#5FD68A">'+l.score+'점</span>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
 
 function renderTMHeroCard(l){
   var el = document.getElementById('tm-hero-card');
