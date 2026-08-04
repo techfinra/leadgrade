@@ -331,6 +331,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       <div class="status-dot"></div>
       <span id="hd-status-text">연결 확인 중...</span>
     </div>
+    <button id="admin-mode-btn" onclick="openAdminLoginModal()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;color:var(--text2);cursor:pointer">🔐 관리자모드</button>
     <button id="theme-btn" onclick="toggleTheme()">🌙 다크모드</button>
   </div>
 </header>
@@ -361,6 +362,7 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
   <div class="sb-label">System</div>
   <button class="nav" id="nav-guide" onclick="showPage(&apos;guide&apos;,this)"><span class="nav-icon">📖</span>가이드</button>
   <button class="nav" id="nav-settings" onclick="showPage(&apos;settings&apos;,this)"><span class="nav-icon">⚙️</span>설정</button>
+  <button class="nav" id="nav-admin" onclick="showPage(&apos;admin&apos;,this)" style="display:none"><span class="nav-icon">🔐</span>관리자 대시보드</button>
   <div class="sb-foot">
     <div id="sb-status"><div style="width:6px;height:6px;border-radius:50%;background:var(--blue);animation:blink 2s infinite"></div><span style="font-size:11px;color:var(--text3);margin-left:7px">연결 확인 중...</span></div>
     <div id="sb-detail" style="font-size:10px;color:var(--text3);line-height:1.9;margin-top:4px"></div>
@@ -626,6 +628,41 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
       <div id="reset-msg" style="margin-top:8px;font-size:12px"></div>
     </div>
   </div>
+</div>
+
+<!-- 관리자 대시보드 -->
+<div class="page" id="page-admin">
+  <div class="sec">🔐 관리자 대시보드</div>
+  <div class="ai-box" style="margin-bottom:18px"><span class="ai-tag">📊 전체 추이</span>전체 영업 데이터의 흐름을 한눈에 확인합니다. 담당자별 성과, 등급 분포 추이, TM/대면영업 전환 현황을 종합적으로 보여줍니다.</div>
+
+  <div class="kpi-grid" style="margin-bottom:20px">
+    <div class="kpi"><div class="kpi-lbl">🏢 전체 기업</div><div class="kpi-val" id="admin-total">—</div></div>
+    <div class="kpi gold"><div class="kpi-lbl">⭐ A등급 비율</div><div class="kpi-val" id="admin-a-rate">—</div></div>
+    <div class="kpi green"><div class="kpi-lbl">✅ 계약성공</div><div class="kpi-val" id="admin-success">—</div></div>
+    <div class="kpi red"><div class="kpi-lbl">📞 누적 통화</div><div class="kpi-val" id="admin-calls">—</div></div>
+  </div>
+
+  <div class="chart-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="chart-card">
+      <div class="chart-title">등급 분포</div>
+      <div id="admin-grade-chart" style="margin-top:10px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">파이프라인 단계별 현황</div>
+      <div id="admin-pipeline-chart" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="sec" style="margin-top:0">👤 담당자별 성과</div>
+  <div id="admin-owner-stats" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+    <div style="text-align:center;padding:30px;color:var(--text3)"><div class="spinner"></div></div>
+  </div>
+
+  <div class="sec">☎️ TM 통화결과 분포</div>
+  <div id="admin-tm-chart" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:20px"></div>
+
+  <div class="sec">📅 최근 7일 저장 추이</div>
+  <div id="admin-trend-chart" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px"></div>
 </div>
 
 <!-- 가이드 -->
@@ -918,6 +955,20 @@ body.dark .grade-circle.gc-C{box-shadow:0 0 20px rgba(245,197,24,.2)}
 
 <div class="panel" id="panel"><button class="panel-close" onclick="closePanel()">✕</button><div id="panel-body"></div></div>
 <div class="modal-bg" id="score-modal" onclick="if(event.target===this)closeModal()"><div class="modal"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><h3 style="font-size:14px;font-weight:800;color:var(--text)">📊 점수 상세</h3><button onclick="closeModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3)">✕</button></div><div id="modal-body"></div><button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="closeModal()">확인</button></div></div>
+<div class="confirm-bg" id="admin-login-bg">
+  <div class="confirm-box">
+    <div style="font-size:28px;margin-bottom:12px">🔐</div>
+    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px">관리자 모드</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">비밀번호를 입력하세요</div>
+    <input type="password" id="admin-pw-input" maxlength="10" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;text-align:center;letter-spacing:4px;margin-bottom:8px" placeholder="••••" onkeydown="if(event.key==='Enter')checkAdminPassword()">
+    <div id="admin-pw-err" style="font-size:11px;color:var(--danger);margin-bottom:10px;min-height:14px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sec" style="flex:1" onclick="closeAdminLoginModal()">취소</button>
+      <button class="btn btn-primary" style="flex:1" onclick="checkAdminPassword()">입장</button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-bg" id="confirm-bg"><div class="confirm-box"><div style="font-size:28px;margin-bottom:12px">🗑️</div><div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px">삭제하시겠습니까?</div><div id="confirm-name" style="font-size:12px;color:var(--text3);margin-bottom:18px;line-height:1.6"></div><div style="display:flex;gap:8px"><button class="btn btn-sec" style="flex:1" onclick="closeConfirm()">취소</button><button class="btn btn-danger" style="flex:1" id="confirm-ok-btn">삭제</button></div></div></div>
 <div id="toast"></div>
 
@@ -1056,6 +1107,29 @@ function setSalesMode(mode){
   }
 }
 
+// ═══ 관리자 모드 로그인 ═══
+var ADMIN_PASSWORD = '1111';
+function openAdminLoginModal(){
+  document.getElementById('admin-pw-input').value = '';
+  document.getElementById('admin-pw-err').textContent = '';
+  document.getElementById('admin-login-bg').classList.add('open');
+  setTimeout(function(){ document.getElementById('admin-pw-input').focus(); }, 100);
+}
+function closeAdminLoginModal(){
+  document.getElementById('admin-login-bg').classList.remove('open');
+}
+function checkAdminPassword(){
+  var pw = document.getElementById('admin-pw-input').value;
+  if (pw === ADMIN_PASSWORD) {
+    closeAdminLoginModal();
+    document.getElementById('nav-admin').style.display = '';
+    showPage('admin', document.getElementById('nav-admin'));
+    showToast('🔐 관리자 모드 활성화');
+  } else {
+    document.getElementById('admin-pw-err').textContent = '비밀번호가 올바르지 않습니다';
+  }
+}
+
 function showPage(id,btn){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav').forEach(function(n){n.classList.remove('active');});
@@ -1069,6 +1143,7 @@ function showPage(id,btn){
   else if(id==='tm') loadTMPage();
   else if(id==='tmcalls') loadTMPage();
   else if(id==='settings') loadScsbidMeta();
+  else if(id==='admin') loadAdminDashboard();
   else if(id==='search') loadScsbidMiniStatus();
 }
 
@@ -3139,6 +3214,107 @@ function renderTMScorePreview(list){
     html += '</div>';
   });
   el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════
+// ═══ 관리자 대시보드 — 전체 추이 요약 ═══
+// ═══════════════════════════════════════════
+async function loadAdminDashboard(){
+  try{
+    var all = await fbGet();
+    savedLeads = all; _allLeads = all;
+
+    var total = all.length;
+    var aCount = all.filter(function(l){return l.grade==='A';}).length;
+    var successCount = all.filter(function(l){return l.status==='계약성공';}).length;
+
+    document.getElementById('admin-total').textContent = total;
+    document.getElementById('admin-a-rate').textContent = total>0 ? Math.round(aCount/total*100)+'%' : '0%';
+    document.getElementById('admin-success').textContent = successCount;
+
+    // 등급 분포 차트 (기존 bar-row 스타일 재사용)
+    var tot = Math.max(1, total);
+    var gHtml = '';
+    [['A등급','var(--danger)'],['B등급','var(--warn)'],['C등급','var(--gold)']].forEach(function(g){
+      var g2 = g[0][0];
+      var n = all.filter(function(l){ return l.grade===g2; }).length;
+      gHtml += '<div class="bar-row"><span class="bar-label">'+g[0]+'</span><div class="bar-track2"><div class="bar-fill2" style="width:'+(n/tot*100)+'%;background:'+g[1]+'"></div></div><span class="bar-count">'+n+'</span></div>';
+    });
+    document.getElementById('admin-grade-chart').innerHTML = gHtml;
+
+    // 파이프라인 단계 차트
+    var pcols = ['var(--blue)','var(--warn)','var(--gold)','var(--purple)','var(--success)','var(--text3)'];
+    var pHtml = '';
+    STATUSES.forEach(function(s,i){
+      var n = all.filter(function(l){ return (l.status||'연락전')===s; }).length;
+      pHtml += '<div class="bar-row"><span class="bar-label" style="font-size:10px">'+s+'</span><div class="bar-track2"><div class="bar-fill2" style="width:'+(n/tot*100)+'%;background:'+pcols[i%pcols.length]+'"></div></div><span class="bar-count">'+n+'</span></div>';
+    });
+    document.getElementById('admin-pipeline-chart').innerHTML = pHtml;
+
+    // 담당자별 성과
+    var ownerEl = document.getElementById('admin-owner-stats');
+    var ownerHtml = '';
+    OWNER_LIST.forEach(function(rep){
+      var repLeads = all.filter(function(l){ return l.owner===rep; });
+      var repSuccess = repLeads.filter(function(l){ return l.status==='계약성공'; }).length;
+      var repInProgress = repLeads.filter(function(l){ return l.status!=='계약성공' && l.status!=='보류'; }).length;
+      var col = OWNER_COLOR[rep] || 'var(--text3)';
+      ownerHtml += '<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;display:flex;align-items:center;gap:14px">';
+      ownerHtml += '<div style="width:40px;height:40px;border-radius:50%;background:'+col.replace('var(','rgba(').replace(')',',.12)')+';color:'+col+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0">'+rep[0]+'</div>';
+      ownerHtml += '<div style="flex:1"><div style="font-size:13px;font-weight:800;color:var(--text)">'+rep+'</div><div style="font-size:10.5px;color:var(--text3)">배정 '+repLeads.length+'건 · 진행중 '+repInProgress+'건</div></div>';
+      ownerHtml += '<div style="text-align:right"><div style="font-size:9px;color:var(--text3)">계약성공</div><div style="font-size:18px;font-weight:900;color:var(--success)">'+repSuccess+'</div></div>';
+      ownerHtml += '</div>';
+    });
+    ownerEl.innerHTML = ownerHtml || '<div style="text-align:center;padding:20px;color:var(--text3)">담당자 데이터 없음</div>';
+
+    // TM 통화결과 분포
+    var logSnap = await withTimeoutFS(db.collection('tmCallLogs').get(), 10000).catch(function(){ return null; });
+    var tmHtml = '';
+    if (logSnap) {
+      document.getElementById('admin-calls').textContent = logSnap.size;
+      var counts = {};
+      logSnap.forEach(function(d){ var c=d.data().resultCode; counts[c]=(counts[c]||0)+1; });
+      var tmTot = Math.max(1, logSnap.size);
+      TM_RESULT_CODES.forEach(function(rc){
+        var n = counts[rc.code] || 0;
+        tmHtml += '<div class="bar-row"><span class="bar-label" style="font-size:10px">'+rc.ico+' '+rc.code+'</span><div class="bar-track2"><div class="bar-fill2" style="width:'+(n/tmTot*100)+'%;background:'+rc.color+'"></div></div><span class="bar-count">'+n+'</span></div>';
+      });
+    } else {
+      document.getElementById('admin-calls').textContent = '0';
+      tmHtml = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px">통화 이력 없음</div>';
+    }
+    document.getElementById('admin-tm-chart').innerHTML = tmHtml;
+
+    // 최근 7일 저장 추이
+    var trendEl = document.getElementById('admin-trend-chart');
+    var days = [];
+    for (var i=6; i>=0; i--) {
+      var d = new Date(); d.setDate(d.getDate()-i);
+      days.push({ label: (d.getMonth()+1)+'/'+d.getDate(), ymd: d.toISOString().slice(0,10) });
+    }
+    var dayCounts = days.map(function(day){
+      return all.filter(function(l){
+        var t = l.savedAt && l.savedAt.toDate ? l.savedAt.toDate() : null;
+        return t && t.toISOString().slice(0,10) === day.ymd;
+      }).length;
+    });
+    var maxDay = Math.max.apply(null, dayCounts.concat([1]));
+    var trendHtml = '<div style="display:flex;align-items:end;gap:8px;height:80px">';
+    days.forEach(function(day, idx){
+      var h = Math.round((dayCounts[idx]/maxDay)*100);
+      trendHtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">';
+      trendHtml += '<div style="font-size:10px;font-weight:800;color:var(--text)">'+dayCounts[idx]+'</div>';
+      trendHtml += '<div style="width:100%;background:var(--blue);border-radius:4px 4px 0 0;height:'+Math.max(h,4)+'%;min-height:4px"></div>';
+      trendHtml += '<div style="font-size:9px;color:var(--text3)">'+day.label+'</div>';
+      trendHtml += '</div>';
+    });
+    trendHtml += '</div>';
+    trendEl.innerHTML = trendHtml;
+
+  } catch(e){
+    console.error('관리자 대시보드 오류:', e);
+    showToast('❌ 관리자 대시보드 로드 실패: ' + e.message);
+  }
 }
 
 function renderTMHeroCard(l){
