@@ -1,30 +1,52 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>낙찰 데이터 20년치 직접수집</title></head>
-<body style="font-family:sans-serif;padding:24px;background:#0D1B3E;color:#fff;max-width:700px;margin:0 auto">
+<html><head><meta charset="UTF-8"><title>낙찰 데이터 직접수집</title></head>
+<body style="font-family:sans-serif;padding:24px;background:#0D1B3E;color:#fff;max-width:760px;margin:0 auto">
 <h2>📊 낙찰 데이터 직접수집 → 엑셀</h2>
-<p style="color:#9db3d8;font-size:14px;line-height:1.7">Firestore에 저장된 것과 무관하게, 나라장터 API에서 <b>바로 새로 받아서</b> 엑셀로 저장합니다.<br>업체명·사업자번호·대표자명·주소·전화번호·낙찰금액·낙찰률·수요기관·공고명·개찰일 등 <b>API가 제공하는 모든 필드</b>를 낙찰 건별로 저장합니다 (시트1: 업체별집계, 시트2: 건별원본데이터).</p>
+<p style="color:#9db3d8;font-size:14px;line-height:1.7">
+Firestore와 무관하게 나라장터 API에서 바로 수집합니다.<br>
+업체명·사업자번호·대표자명·주소·전화번호·낙찰금액·낙찰률·수요기관·공고명·개찰일·참가업체수 등 <b>API 제공 필드 전체</b>를 낙찰 건별로 저장합니다.
+</p>
 <div style="background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.4);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7">
-⚠️ 하루 API 호출 한도(보통 1,000회)를 넘으면 중단될 수 있습니다. 중단돼도 <b>그때까지 모은 데이터는 엑셀로 받을 수 있습니다.</b>
+⚠️ 하루 API 호출 한도(보통 1,000회)를 넘으면 자동 중단됩니다. 아무 때나 <b>[⏸ 중지하고 지금까지 저장]</b>으로 그때까지 모은 데이터를 받을 수 있습니다.
 </div>
 
-<div style="margin-bottom:16px">
-  <label style="font-size:13px;margin-right:10px">수집 기간(년):</label>
-  <input type="number" id="years" value="20" min="1" max="25" style="width:70px;padding:6px;border-radius:6px;border:none">
+<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:16px;margin-bottom:16px">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:10px">
+    <div>
+      <label style="font-size:11px;color:#9db3d8;display:block;margin-bottom:4px">시작일</label>
+      <input type="date" id="startDate" style="padding:8px;border-radius:6px;border:none;font-size:13px">
+    </div>
+    <div>
+      <label style="font-size:11px;color:#9db3d8;display:block;margin-bottom:4px">종료일</label>
+      <input type="date" id="endDate" style="padding:8px;border-radius:6px;border:none;font-size:13px">
+    </div>
+    <button id="preset20" style="padding:8px 12px;border-radius:6px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">최근 20년</button>
+    <button id="preset5" style="padding:8px 12px;border-radius:6px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">최근 5년</button>
+    <button id="preset1" style="padding:8px 12px;border-radius:6px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">최근 1년</button>
+  </div>
+  <div id="rangeInfo" style="font-size:11px;color:#7BAAF7"></div>
 </div>
 
-<button id="btn" style="background:#C8A84B;color:#0D1B3E;border:none;padding:14px 28px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer">🚀 수집 시작</button>
-<button id="downloadBtn" style="background:#5FD68A;color:#0D1B3E;border:none;padding:14px 28px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;display:none;margin-left:8px">📥 지금까지 엑셀로 받기</button>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+  <button id="btn" style="background:#C8A84B;color:#0D1B3E;border:none;padding:14px 24px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer">🚀 수집 시작</button>
+  <button id="stopBtn" style="background:#e05252;color:#fff;border:none;padding:14px 24px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;display:none">⏸ 중지하고 지금까지 저장</button>
+  <button id="downloadBtn" style="background:#5FD68A;color:#0D1B3E;border:none;padding:14px 24px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer;display:none">📥 지금까지 엑셀로 받기</button>
+</div>
 
-<div id="progress" style="margin-top:16px;font-size:13px;color:#9db3d8"></div>
-<div id="log" style="margin-top:12px;font-family:monospace;font-size:12px;line-height:1.8;max-height:400px;overflow-y:auto;background:rgba(0,0,0,.2);border-radius:8px;padding:12px"></div>
+<div style="background:rgba(255,255,255,.08);border-radius:8px;height:10px;margin-bottom:8px;overflow:hidden">
+  <div id="progressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#5a8bff,#C8A84B);transition:width .3s"></div>
+</div>
+<div id="progress" style="margin-bottom:14px;font-size:13px;color:#9db3d8"></div>
+<div id="log" style="font-family:monospace;font-size:12px;line-height:1.8;max-height:400px;overflow-y:auto;background:rgba(0,0,0,.2);border-radius:8px;padding:12px"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 var API_KEY = '5e28545eb4cc2148cc0a3dc9eb8d273018db18537aa28ed21e7983ed66363aef';
 var PAGE_SIZE = 100;
 var companyMap = {};
-var rawRecords = [];  // 낙찰 건별 원본 데이터 전체 보관
+var rawRecords = [];
 var stopped = false;
+var running = false;
 
 function log(msg, color) {
   var d = document.createElement('div');
@@ -33,12 +55,35 @@ function log(msg, color) {
   document.getElementById('log').appendChild(d);
   d.scrollIntoView();
 }
-function setProgress(msg) { document.getElementById('progress').textContent = msg; }
-
-function dateStr(daysAgo) {
-  var d = new Date(); d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0,10).replace(/-/g,'');
+function setProgress(msg, pct) {
+  document.getElementById('progress').textContent = msg;
+  if (pct != null) document.getElementById('progressBar').style.width = pct + '%';
 }
+function fmtDate(d) { return d.toISOString().slice(0,10); }
+function toYMD(d) { return d.replace(/-/g,''); }
+
+function setPreset(years) {
+  var end = new Date();
+  var start = new Date(); start.setFullYear(start.getFullYear() - years);
+  document.getElementById('startDate').value = fmtDate(start);
+  document.getElementById('endDate').value = fmtDate(end);
+  updateRangeInfo();
+}
+document.getElementById('preset20').onclick = function(){ setPreset(20); };
+document.getElementById('preset5').onclick = function(){ setPreset(5); };
+document.getElementById('preset1').onclick = function(){ setPreset(1); };
+document.getElementById('startDate').onchange = updateRangeInfo;
+document.getElementById('endDate').onchange = updateRangeInfo;
+
+function updateRangeInfo() {
+  var s = document.getElementById('startDate').value;
+  var e = document.getElementById('endDate').value;
+  if (!s || !e) { document.getElementById('rangeInfo').textContent = ''; return; }
+  var days = Math.round((new Date(e) - new Date(s)) / 86400000);
+  var windows = Math.ceil(days / 30);
+  document.getElementById('rangeInfo').textContent = '총 ' + days + '일 · 약 ' + windows + '개 구간 (분야 3개 × 구간)';
+}
+setPreset(20); // 기본값
 
 async function naraFetch(ep, qs) {
   try {
@@ -81,7 +126,6 @@ function aggregate(items) {
     var fld = s.bidClsfcNo || '';
     var org = s.dminsttNm || '';
 
-    // ─ 집계용 (업체 단위 요약)
     if (!companyMap[key]) companyMap[key] = { nm:nm, bizno:bizno, count:0, totalAmt:0, fields:new Set(), orgs:new Set(), firstDate:dt, lastDate:dt };
     var m = companyMap[key];
     m.count++;
@@ -91,7 +135,6 @@ function aggregate(items) {
     if (dt > m.lastDate) m.lastDate = dt;
     if (dt && dt < m.firstDate) m.firstDate = dt;
 
-    // ─ 원본 전체 필드 보관 (건별, 표에 있는 필드 전부)
     rawRecords.push({
       '낙찰업체명': s.bidwinnrNm || '',
       '사업자등록번호': s.bidwinnrBizno || '',
@@ -112,14 +155,15 @@ function aggregate(items) {
   });
 }
 
-function makeWindows(years) {
+function makeWindows(startYMD, endYMD) {
   var windows = [];
-  var totalDays = years * 365;
-  var cursor = totalDays;
-  while (cursor > 0) {
-    var winEnd = Math.max(cursor - 30, 0);
-    windows.push({ bgn: dateStr(cursor), end: dateStr(winEnd + (winEnd>0?1:0)) });
-    cursor = winEnd;
+  var cursorEnd = new Date(endYMD.slice(0,4)+'-'+endYMD.slice(4,6)+'-'+endYMD.slice(6,8));
+  var startD = new Date(startYMD.slice(0,4)+'-'+startYMD.slice(4,6)+'-'+startYMD.slice(6,8));
+  while (cursorEnd > startD) {
+    var winStart = new Date(cursorEnd); winStart.setDate(winStart.getDate() - 29);
+    if (winStart < startD) winStart = new Date(startD);
+    windows.push({ bgn: toYMD(fmtDate(winStart)), end: toYMD(fmtDate(cursorEnd)) });
+    cursorEnd = new Date(winStart); cursorEnd.setDate(cursorEnd.getDate() - 1);
   }
   return windows;
 }
@@ -135,71 +179,94 @@ function exportToExcel() {
     };
   }).sort(function(a,b){ return b['낙찰횟수']-a['낙찰횟수']; });
 
-  if (!rows.length) { log('❌ 내려받을 데이터가 없습니다', '#f44'); return; }
+  if (!rows.length && !rawRecords.length) { log('❌ 내려받을 데이터가 아직 없습니다', '#f44'); return; }
 
   var wb = XLSX.utils.book_new();
-
-  // 시트1: 업체별 집계 요약
-  var ws1 = XLSX.utils.json_to_sheet(rows);
-  ws1['!cols'] = [{wch:28},{wch:14},{wch:10},{wch:14},{wch:14},{wch:16},{wch:50},{wch:12},{wch:12}];
-  XLSX.utils.book_append_sheet(wb, ws1, '업체별집계');
-
-  // 시트2: 낙찰 건별 원본 데이터 전체 (표에 있는 모든 필드)
-  var ws2 = XLSX.utils.json_to_sheet(rawRecords);
-  ws2['!cols'] = [{wch:26},{wch:14},{wch:10},{wch:35},{wch:16},{wch:14},{wch:12},{wch:24},{wch:40},{wch:16},{wch:8},{wch:20},{wch:12},{wch:20},{wch:10}];
-  XLSX.utils.book_append_sheet(wb, ws2, '건별원본데이터');
+  if (rows.length) {
+    var ws1 = XLSX.utils.json_to_sheet(rows);
+    ws1['!cols'] = [{wch:28},{wch:14},{wch:10},{wch:14},{wch:14},{wch:16},{wch:50},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws1, '업체별집계');
+  }
+  if (rawRecords.length) {
+    var ws2 = XLSX.utils.json_to_sheet(rawRecords);
+    ws2['!cols'] = [{wch:26},{wch:14},{wch:10},{wch:35},{wch:16},{wch:14},{wch:12},{wch:24},{wch:40},{wch:16},{wch:8},{wch:20},{wch:12},{wch:20},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws2, '건별원본데이터');
+  }
 
   var today = new Date().toISOString().slice(0,10).replace(/-/g,'');
-  XLSX.writeFile(wb, 'LeadGrade_직접수집_' + rows.length + '개사_' + rawRecords.length + '건_' + today + '.xlsx');
-  log('✅ 엑셀 다운로드 완료 (업체별집계 ' + rows.length + '개사 · 건별원본 ' + rawRecords.length + '건, 2개 시트)', '#0f0');
+  var stampedName = 'LeadGrade_직접수집_' + rows.length + '개사_' + rawRecords.length + '건_' + today + '.xlsx';
+  XLSX.writeFile(wb, stampedName);
+  log('✅ 엑셀 다운로드 완료 (업체별집계 ' + rows.length + '개사 · 건별원본 ' + rawRecords.length + '건)', '#0f0');
 }
 
 document.getElementById('downloadBtn').onclick = exportToExcel;
+document.getElementById('stopBtn').onclick = function(){
+  stopped = true;
+  log('⏸ 사용자가 중지 요청 — 현재 구간까지만 마무리합니다', '#fa0');
+};
 
 document.getElementById('btn').onclick = async function() {
-  this.disabled = true;
-  companyMap = {}; stopped = false;
+  var startYMD = toYMD(document.getElementById('startDate').value);
+  var endYMD = toYMD(document.getElementById('endDate').value);
+  if (!startYMD || !endYMD) { alert('시작일/종료일을 선택하세요'); return; }
+
+  this.disabled = true; running = true; stopped = false;
+  document.getElementById('stopBtn').style.display = '';
   document.getElementById('downloadBtn').style.display = '';
-  var years = parseInt(document.getElementById('years').value) || 20;
-  var windows = makeWindows(years);
+  companyMap = {}; rawRecords = [];
+
+  var windows = makeWindows(startYMD, endYMD);
   var eps = ['getScsbidListSttusCnstwk','getScsbidListSttusServc','getScsbidListSttusThng'];
 
-  log('🚀 ' + years + '년치 수집 시작 — 총 ' + windows.length + '개 구간');
+  log('🚀 수집 시작 — ' + document.getElementById('startDate').value + ' ~ ' + document.getElementById('endDate').value + ' (총 ' + windows.length + '개 구간)');
 
   for (var wi = 0; wi < windows.length; wi++) {
-    if (stopped) break;
+    if (stopped) { log('🛑 사용자 중지로 수집을 멈췄습니다'); break; }
     var w = windows[wi];
-    setProgress('[' + (wi+1) + '/' + windows.length + '] ' + w.bgn + '~' + w.end + ' 처리 중... (누적 ' + Object.keys(companyMap).length + '개사)');
+    var pct = Math.round(((wi+1)/windows.length)*100);
+    setProgress('[' + (wi+1) + '/' + windows.length + '] ' + w.bgn + '~' + w.end + ' 처리 중... (누적 ' + Object.keys(companyMap).length + '개사 · ' + rawRecords.length + '건)', pct);
 
     var windowItemCount = 0;
-    for (var ei = 0; ei < eps.length; ei++) {
+    // 3개 분야 병렬 호출로 속도 개선
+    var results = await Promise.all(eps.map(async function(ep){
       var qs = 'ServiceKey=' + API_KEY + '&pageNo=1&numOfRows=' + PAGE_SIZE + '&type=json&inqryDiv=1&inqryBgnDt=' + w.bgn + '0000&inqryEndDt=' + w.end + '2359';
-      var r1 = await naraFetch(eps[ei], qs);
-      if (r1.quotaError) {
-        log('🛑 일일 호출 한도 초과로 중단합니다. 지금까지 모은 ' + Object.keys(companyMap).length + '개사는 엑셀로 받으세요.', '#f44');
-        stopped = true; break;
-      }
+      return await naraFetch(ep, qs);
+    }));
+
+    var anyQuotaError = false;
+    for (var ri = 0; ri < results.length; ri++) {
+      var r1 = results[ri];
+      if (r1.quotaError) { anyQuotaError = true; continue; }
       aggregate(r1.items);
       windowItemCount += r1.items.length;
-      // 페이지네이션 (최대 5페이지)
       var pages = Math.min(Math.ceil(r1.totalCount / PAGE_SIZE), 5);
       for (var pg = 2; pg <= pages; pg++) {
         var qs2 = 'ServiceKey=' + API_KEY + '&pageNo=' + pg + '&numOfRows=' + PAGE_SIZE + '&type=json&inqryDiv=1&inqryBgnDt=' + w.bgn + '0000&inqryEndDt=' + w.end + '2359';
-        var rp = await naraFetch(eps[ei], qs2);
-        if (rp.quotaError) { stopped = true; break; }
+        var rp = await naraFetch(eps[ri], qs2);
+        if (rp.quotaError) { anyQuotaError = true; break; }
         if (!rp.items.length) break;
         aggregate(rp.items);
         windowItemCount += rp.items.length;
       }
-      if (stopped) break;
     }
-    // 구간마다 매번 로그 (10개마다가 아니라) — "멈춘 것처럼 보이는" 문제 해결
-    log('[' + (wi+1) + '/' + windows.length + '] ' + w.bgn + '~' + w.end + ' · 이번구간 ' + windowItemCount + '건 · 누적 ' + Object.keys(companyMap).length + '개사');
+
+    if (anyQuotaError) {
+      log('🛑 일일 호출 한도 초과로 중단합니다. 지금까지 모은 데이터(' + Object.keys(companyMap).length + '개사 · ' + rawRecords.length + '건)는 엑셀로 받으세요.', '#f44');
+      stopped = true;
+    }
+
+    log('[' + (wi+1) + '/' + windows.length + '] ' + w.bgn + '~' + w.end + ' · 이번구간 ' + windowItemCount + '건 · 누적 ' + Object.keys(companyMap).length + '개사 · ' + rawRecords.length + '건');
+
+    if (rawRecords.length > 0 && (wi+1) % 30 === 0) {
+      log('💾 안전을 위해 지금까지 데이터를 저장하시려면 [지금까지 엑셀로 받기]를 눌러도 됩니다', '#7BAAF7');
+    }
   }
 
-  log('📦 수집 종료 — 총 ' + Object.keys(companyMap).length + '개사 확보');
-  setProgress('완료 — 아래 버튼으로 엑셀을 받으세요');
+  log('📦 수집 종료 — 업체 ' + Object.keys(companyMap).length + '개사, 원본 ' + rawRecords.length + '건 확보');
+  setProgress('완료 — 아래 버튼으로 엑셀을 받으세요', 100);
   this.disabled = false;
+  running = false;
+  document.getElementById('stopBtn').style.display = 'none';
   exportToExcel();
 };
 </script>
