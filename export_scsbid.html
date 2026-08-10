@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>낙찰 데이터 엑셀 다운로드</title></head>
+<body style="font-family:sans-serif;padding:24px;background:#0D1B3E;color:#fff;max-width:600px;margin:0 auto">
+<h2>📊 낙찰 데이터 엑셀 다운로드</h2>
+<p style="color:#9db3d8;font-size:14px;line-height:1.7">낙찰이력 DB(<b>scsbidCompanies</b>)에 저장된 업체 데이터를 엑셀 파일로 바로 내려받습니다.</p>
+<button id="btn" style="background:#C8A84B;color:#0D1B3E;border:none;padding:14px 28px;font-size:15px;font-weight:800;border-radius:10px;cursor:pointer">📥 엑셀로 다운로드</button>
+<div id="log" style="margin-top:20px;font-family:monospace;font-size:13px;line-height:1.9"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:           "AIzaSyBcpPb1REiD0OPzEbJZDdrZNx4rfLHk84A",
+  authDomain:       "powerfull-fe4c1.firebaseapp.com",
+  projectId:        "powerfull-fe4c1",
+  storageBucket:    "powerfull-fe4c1.firebasestorage.app",
+  messagingSenderId:"88203935558",
+  appId:            "1:88203935558:web:5dbdff7920488f23e7af47"
+});
+var db = firebase.firestore();
+
+function log(msg, color) {
+  var d = document.createElement('div');
+  d.style.color = color || '#0f0';
+  d.textContent = msg;
+  document.getElementById('log').appendChild(d);
+}
+
+document.getElementById('btn').onclick = async function() {
+  this.disabled = true;
+  this.textContent = '⏳ 불러오는 중...';
+  log('📡 Firestore에서 낙찰 데이터 조회 중...');
+  try {
+    var snap = await db.collection('scsbidCompanies').get();
+    if (snap.empty) {
+      log('⚠️ 낙찰 데이터가 없습니다. 설정 탭에서 "최초 학습"을 먼저 실행하세요.', '#fa0');
+      this.disabled = false; this.textContent = '📥 엑셀로 다운로드';
+      return;
+    }
+    log('✅ ' + snap.size + '개사 조회 완료. 엑셀 변환 중...');
+
+    var rows = [];
+    snap.forEach(function(d) {
+      var v = d.data();
+      rows.push({
+        '업체명': v.nm || '',
+        '사업자번호': v.bizno || '',
+        '낙찰횟수': v.count || 0,
+        '누적낙찰금액': v.totalAmt || 0,
+        '평균낙찰금액': v.count ? Math.round((v.totalAmt||0) / v.count) : 0,
+        '분야': (v.fields || []).map(function(f){ return {'1':'공사','2':'용역','3':'물품'}[f] || f; }).join(', '),
+        '주요수요기관': (v.orgs || []).join(', '),
+        '최초낙찰일': v.firstDate || '',
+        '최근낙찰일': v.lastDate || ''
+      });
+    });
+
+    // 낙찰횟수 많은 순 정렬
+    rows.sort(function(a,b){ return b['낙찰횟수'] - a['낙찰횟수']; });
+
+    var ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      {wch:28},{wch:14},{wch:10},{wch:14},{wch:14},{wch:16},{wch:40},{wch:12},{wch:12}
+    ];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '낙찰데이터');
+
+    var today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    XLSX.writeFile(wb, 'LeadGrade_낙찰데이터_' + today + '.xlsx');
+
+    log('✅ 다운로드 완료! (' + rows.length + '건)', '#0f0');
+    this.textContent = '✅ 다운로드 완료';
+  } catch(e) {
+    log('❌ 오류: ' + e.message, '#f44');
+    this.disabled = false; this.textContent = '📥 엑셀로 다운로드';
+  }
+};
+</script>
+</body></html>
