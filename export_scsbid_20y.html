@@ -42,7 +42,7 @@ function dateStr(daysAgo) {
 async function naraFetch(ep, qs) {
   try {
     var url = '/api/nara?' + qs + '&_ep=' + ep + '&_svc=ScsbidInfoService';
-    var r = await fetch(url, {signal: AbortSignal.timeout(18000)});
+    var r = await fetch(url, {signal: AbortSignal.timeout(12000)});
     var txt = await r.text();
     if (!txt || txt.length < 50) return { items: [], totalCount: 0, quotaError: false };
     if (txt.indexOf('_debug') >= 0) return { items: [], totalCount: 0, quotaError: false };
@@ -141,6 +141,7 @@ document.getElementById('btn').onclick = async function() {
     var w = windows[wi];
     setProgress('[' + (wi+1) + '/' + windows.length + '] ' + w.bgn + '~' + w.end + ' 처리 중... (누적 ' + Object.keys(companyMap).length + '개사)');
 
+    var windowItemCount = 0;
     for (var ei = 0; ei < eps.length; ei++) {
       var qs = 'ServiceKey=' + API_KEY + '&pageNo=1&numOfRows=' + PAGE_SIZE + '&type=json&inqryDiv=1&inqryBgnDt=' + w.bgn + '0000&inqryEndDt=' + w.end + '2359';
       var r1 = await naraFetch(eps[ei], qs);
@@ -149,6 +150,7 @@ document.getElementById('btn').onclick = async function() {
         stopped = true; break;
       }
       aggregate(r1.items);
+      windowItemCount += r1.items.length;
       // 페이지네이션 (최대 5페이지)
       var pages = Math.min(Math.ceil(r1.totalCount / PAGE_SIZE), 5);
       for (var pg = 2; pg <= pages; pg++) {
@@ -157,10 +159,12 @@ document.getElementById('btn').onclick = async function() {
         if (rp.quotaError) { stopped = true; break; }
         if (!rp.items.length) break;
         aggregate(rp.items);
+        windowItemCount += rp.items.length;
       }
       if (stopped) break;
     }
-    if (wi % 10 === 0) log('[' + (wi+1) + '/' + windows.length + '] 누적 ' + Object.keys(companyMap).length + '개사');
+    // 구간마다 매번 로그 (10개마다가 아니라) — "멈춘 것처럼 보이는" 문제 해결
+    log('[' + (wi+1) + '/' + windows.length + '] ' + w.bgn + '~' + w.end + ' · 이번구간 ' + windowItemCount + '건 · 누적 ' + Object.keys(companyMap).length + '개사');
   }
 
   log('📦 수집 종료 — 총 ' + Object.keys(companyMap).length + '개사 확보');
