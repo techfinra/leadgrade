@@ -2,7 +2,7 @@
 <html><head><meta charset="UTF-8"><title>낙찰 데이터 20년치 직접수집</title></head>
 <body style="font-family:sans-serif;padding:24px;background:#0D1B3E;color:#fff;max-width:700px;margin:0 auto">
 <h2>📊 낙찰 데이터 직접수집 → 엑셀</h2>
-<p style="color:#9db3d8;font-size:14px;line-height:1.7">Firestore에 저장된 것과 무관하게, 나라장터 API에서 <b>바로 새로 받아서</b> 엑셀로 저장합니다.</p>
+<p style="color:#9db3d8;font-size:14px;line-height:1.7">Firestore에 저장된 것과 무관하게, 나라장터 API에서 <b>바로 새로 받아서</b> 엑셀로 저장합니다.<br>업체명·사업자번호·대표자명·주소·전화번호·낙찰금액·낙찰률·수요기관·공고명·개찰일 등 <b>API가 제공하는 모든 필드</b>를 낙찰 건별로 저장합니다 (시트1: 업체별집계, 시트2: 건별원본데이터).</p>
 <div style="background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.4);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7">
 ⚠️ 하루 API 호출 한도(보통 1,000회)를 넘으면 중단될 수 있습니다. 중단돼도 <b>그때까지 모은 데이터는 엑셀로 받을 수 있습니다.</b>
 </div>
@@ -23,6 +23,7 @@
 var API_KEY = '5e28545eb4cc2148cc0a3dc9eb8d273018db18537aa28ed21e7983ed66363aef';
 var PAGE_SIZE = 100;
 var companyMap = {};
+var rawRecords = [];  // 낙찰 건별 원본 데이터 전체 보관
 var stopped = false;
 
 function log(msg, color) {
@@ -79,6 +80,8 @@ function aggregate(items) {
     var dt = s.fnlSucsfDate || s.rlOpengDt || s.rgstDt || '';
     var fld = s.bidClsfcNo || '';
     var org = s.dminsttNm || '';
+
+    // ─ 집계용 (업체 단위 요약)
     if (!companyMap[key]) companyMap[key] = { nm:nm, bizno:bizno, count:0, totalAmt:0, fields:new Set(), orgs:new Set(), firstDate:dt, lastDate:dt };
     var m = companyMap[key];
     m.count++;
@@ -87,6 +90,25 @@ function aggregate(items) {
     if (org) m.orgs.add(org);
     if (dt > m.lastDate) m.lastDate = dt;
     if (dt && dt < m.firstDate) m.firstDate = dt;
+
+    // ─ 원본 전체 필드 보관 (건별, 표에 있는 필드 전부)
+    rawRecords.push({
+      '낙찰업체명': s.bidwinnrNm || '',
+      '사업자등록번호': s.bidwinnrBizno || '',
+      '대표자명': s.bidwinnrCeoNm || '',
+      '업체주소': s.bidwinnrAdrs || '',
+      '업체전화번호': s.bidwinnrTelNo || '',
+      '최종낙찰금액': s.sucsfbidAmt ? parseFloat(s.sucsfbidAmt) : '',
+      '최종낙찰률(%)': s.sucsfbidRate || '',
+      '수요기관명': s.dminsttNm || '',
+      '입찰공고명': s.bidNtceNm || '',
+      '입찰공고번호': s.bidNtceNo || '',
+      '분야': {'1':'공사','2':'용역','3':'물품'}[fld] || fld || '',
+      '실개찰일시': s.rlOpengDt || '',
+      '최종낙찰일자': s.fnlSucsfDate || '',
+      '등록일시': s.rgstDt || '',
+      '참가업체수': s.prtcptCnum || ''
+    });
   });
 }
 
@@ -115,13 +137,21 @@ function exportToExcel() {
 
   if (!rows.length) { log('❌ 내려받을 데이터가 없습니다', '#f44'); return; }
 
-  var ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:28},{wch:14},{wch:10},{wch:14},{wch:14},{wch:16},{wch:50},{wch:12},{wch:12}];
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '낙찰데이터');
+
+  // 시트1: 업체별 집계 요약
+  var ws1 = XLSX.utils.json_to_sheet(rows);
+  ws1['!cols'] = [{wch:28},{wch:14},{wch:10},{wch:14},{wch:14},{wch:16},{wch:50},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws1, '업체별집계');
+
+  // 시트2: 낙찰 건별 원본 데이터 전체 (표에 있는 모든 필드)
+  var ws2 = XLSX.utils.json_to_sheet(rawRecords);
+  ws2['!cols'] = [{wch:26},{wch:14},{wch:10},{wch:35},{wch:16},{wch:14},{wch:12},{wch:24},{wch:40},{wch:16},{wch:8},{wch:20},{wch:12},{wch:20},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, '건별원본데이터');
+
   var today = new Date().toISOString().slice(0,10).replace(/-/g,'');
-  XLSX.writeFile(wb, 'LeadGrade_직접수집_' + rows.length + '개사_' + today + '.xlsx');
-  log('✅ 엑셀 다운로드 완료 (' + rows.length + '개사)', '#0f0');
+  XLSX.writeFile(wb, 'LeadGrade_직접수집_' + rows.length + '개사_' + rawRecords.length + '건_' + today + '.xlsx');
+  log('✅ 엑셀 다운로드 완료 (업체별집계 ' + rows.length + '개사 · 건별원본 ' + rawRecords.length + '건, 2개 시트)', '#0f0');
 }
 
 document.getElementById('downloadBtn').onclick = exportToExcel;
